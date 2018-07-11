@@ -1,0 +1,270 @@
+#!/bin/bash
+me="$0"
+
+SVN_BASE='svn+ssh://svn.visaplan.com/unitracc'
+UNITRACC_BASE='/projects/unitracc'
+SOURCE_PATH='Products/unitracc/tools'
+DEST_PATH='src/visaplan/tools'
+
+# ----------------------------------------------- [ Vorgeplänkel ... [
+# --------------------------------- [ allgemeine Funktionen ... [
+ok=1
+TOP_PID=''
+function err() {
+    echo -e "\x1b[;1;31m$me:E $@\x1b[m" >&2
+    ok=0
+}
+
+function warn() {
+    echo -e "\e[1;33;40m$me:W $@ \x1b[m" >&2
+}
+
+function info() {
+    echo -e "\e[;1m$me:i $@\x1b[m" >&2
+}
+
+function info2stdout() {
+    echo -e "\e[;1m$me:i $@\x1b[m"
+}
+# --------------------------------- ] ... allgemeine Funktionen ]
+
+# ---------------------------------- [ spezielle Funktionen ... [
+function check_trunk() {
+	local newspec="$UNITRACC_BASE/trunk"
+	if [ -z "$SOURCE_ROOT" ]; then
+		SOURCE_ROOT="$newspec"
+		return 0
+	elif [ "$newspec" == "$SOURCE_ROOT" ]; then
+		return 0
+	else
+		err "Doppelte Angabe der Quelle (--trunk)"
+		return 1
+	fi
+}
+
+function check_branch() {
+	local newspec="$UNITRACC_BASE/branches/$1"
+	if [ -z "$SOURCE_ROOT" ]; then
+		SOURCE_ROOT="$newspec"
+		return 0
+	elif [ "$newspec" == "$SOURCE_ROOT" ]; then
+		return 0
+	else
+		err "Doppelte Angabe des Quellzweigs (--branch=$1)"
+		return 1
+	fi
+}
+
+function add_copied() {
+	if [ -z "$SAMENAME" ]; then
+		SAMENAME="$1"
+	else
+		SAMENAME="$SAMENAME $1"
+	fi
+}
+
+function add_renamed() {
+	if [ -z "$RENAMED" ]; then
+		RENAMED="$1"
+	else
+		RENAMED="$RENAMED $1"
+	fi
+}
+
+function merge_copied() {
+	local mod="$1"
+	echo svn merge $SVNARGS "^$SOURCE_ROOT/$SOURCE_PATH/$mod $DEST_PATH/$mod ..."
+	DONE_ANYTHING='x'
+	svn merge $SVNARGS "^$SOURCE_ROOT/$SOURCE_PATH/$mod" "$DEST_PATH/$mod" && return
+	err "Fehler bei Integration von Änderungen für $mod!"
+}
+
+function merge_renamed() {
+	local src="$1" mod="$2"
+	echo svn merge $SVNARGS "^$SOURCE_ROOT/$SOURCE_PATH/$src $DEST_PATH/$mod ..."
+	DONE_ANYTHING='x'
+	svn merge $SVNARGS "^$SOURCE_ROOT/$SOURCE_PATH/$src" "$DEST_PATH/$mod" && return
+	err "Fehler bei Integration von Änderungen für $mod aus $src!"
+}
+# ---------------------------------- ] ... spezielle Funktionen ]
+# ----------------------------------------------- ] ... Vorgeplänkel ]
+
+# ----------------------------------------- [ Argumentauswertung ... [
+SOURCE_ROOT=''
+SVNARGS=''
+FROMTRUNK=''
+FROMBRANCH=''
+SAMENAME=''
+RENAMED=''
+PENDING=''
+for arg in "$@"; do
+	if [ -z "$PENDING" ]; then
+		case "$arg" in
+# ------------------------------------ [ Angaben für Module ... [
+			$DEST_PATH/classes.py)
+				add_copied "$arg"
+				;;
+			$DEST_PATH/coding.py)
+				add_renamed "$arg"
+				;;
+			$DEST_PATH/debug.py)
+				add_renamed "$arg"
+				;;
+			$DEST_PATH/dicts.py)
+				add_renamed "$arg"
+				;;
+			$DEST_PATH/files.py)  # bis auf id_of
+				add_copied "$arg"
+				;;
+			$DEST_PATH/html.py)
+				add_copied "$arg"
+				;;
+			$DEST_PATH/http.py)
+				add_copied "$arg"
+				;;
+			$DEST_PATH/lands0.py)
+				add_renamed "$arg"
+				;;
+			$DEST_PATH/minifuncs.py)
+				add_renamed "$arg"
+				;;
+			$DEST_PATH/sequences.py)
+				add_renamed "$arg"
+				;;
+			$DEST_PATH/times.py)
+				add_renamed "$arg"
+				;;
+# ------------------------------------ ] ... Angaben für Module ]
+			'--help'|'-h'|'-?'|'?')
+				HELP="$arg"
+				;;
+# ------------------------------------ [ spezielle Optionen ... [
+			-t|--trunk)
+				check_trunk
+				;;
+			-b|--branch)
+				PENDING="$arg"
+				;;
+			--branch=*)
+				val=$(echo "$arg"|sed 's/--branch=//')
+				check_branch "$val"
+				;;
+			-b*)
+				val=$(echo "$arg"|sed 's/-b//')
+				check_branch "$val"
+				;;
+# ------------------------------------ ] ... spezielle Optionen ]
+# ------------------------------------------ [ svn-Optionen ... [
+			-[cv])
+				PENDING="$arg"
+				;;
+			-[cv]*)
+				SVNARGS="$SVNARGS $arg"
+				;;
+# ------------------------------------------ ] ... svn-Optionen ]
+			-*)
+				err "Unbekannte Option: '$arg'"
+				;;
+			*.py)
+				if [ -f "$arg" ]; then
+					err "Noch keine Angaben für Modul '$arg'"
+				else
+					err "Modul '$arg' nicht gefunden, und keine Angaben"
+				fi
+				;;
+			*)
+				err "Unbekanntes Argument: '$arg'"
+		esac
+	else
+		case "$PENDING" in
+			-b|--branch)
+				check_branch "$arg"
+				;;
+			-[cv])
+				SVNARGS="$SVNARGS $PENDING$arg"
+				;;
+		esac
+		PENDING=''
+	fi
+done
+if [ -n "$HELP" ]; then
+	cat <<- EOT
+${me}: Übernahme von Änderungen aus dem Unitracc-Monolithen
+
+Aufruf: $(basename $me) {-t|-b branch} {-c...|-r...} modul.py [...] {-s quelle.py}
+
+Es werden die angegebenen Module modul.py anhand der Angaben (Stamm bzw. Zweig,
+Revision[en]) aktualisiert; sofern Module gegenüber dem Unitracc-Monolitzen
+umbenannt wurden, wird die abweichende Quelle entsprechend verwendet.
+Manche Module wurden aus mehreren Quellmodulen zusammengestellt; bei diesen kann
+die Angabe der zu verwendenden Quelle nötig sein (-s quelle.py).
+
+Optionen:
+  -t, --trunk   Änderungen aus dem Stamm
+  -b zweig, --branch ...
+                Änderungen aus dem angegebenen Zweig
+  -cREV, -rREV  Revisionsangaben wie für svn merge
+  modul.py      Zu aktualisierendes Modul (lokaler Dateiname).
+                Es können -- solange nicht unterschiedliche -s-Angaben benötigt
+                werden -- mehrere Module angegeben werden.
+  -s quelle.py  Angabe der zu verwendenden Quelle, wenn für ein konkretes Modul
+                mehrere infrage kommen
+  -h, --help, -?
+                Ausgabe dieser Hilfe
+EOT
+exit 1
+fi
+if [ -n "$PENDING" ]; then
+	err "$PENDING erwartet ein Argument"
+fi
+if [ "$ok" -eq 0 ]; then
+	exit 1
+fi
+if [ -z "$SOURCE_ROOT" ]; then
+	check_trunk
+fi
+info "Quelle ist $SOURCE_ROOT"
+# ----------------------------------------- ] ... Argumentauswertung ]
+DONE_ANYTHING=''
+for mod in $SAMENAME; do
+	merge_copied "$mod"
+done
+for mod in $RENAMED; do
+	case "$mod" in
+		coding.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			merge_renamed misc.py "$mod"
+			;;
+		minifuncs.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			merge_renamed misc.py "$mod"
+			;;
+		sequences.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			merge_renamed misc.py "$mod"
+			;;
+		times.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			merge_renamed misc.py "$mod"
+			;;
+		debug.py)
+			# TODO: auch debug.py in Betracht ziehen
+			merge_renamed debug2.py "$mod"
+			;;
+		dicts.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			merge_renamed forms.py "$mod"
+			;;
+		lands0.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			merge_renamed forms.py "$mod"
+			;;
+		*)
+			err "Woher wurde '$mod' umbenannt?!"
+			;;
+	esac
+	DONE_ANYTHING='x'
+done
+if [ -z "$DONE_ANYTHING" ]; then
+	err "Nichts zu tun!"
+fi

@@ -34,6 +34,7 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+pip-selfcheck.json
 
 # Unit test / coverage reports
 htmlcov/
@@ -90,6 +91,13 @@ ENV/
 env.bak/
 venv.bak/
 
+# VirtualEnv
+bin/
+include/
+Scripts/
+lib64
+.profile
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -105,3 +113,10 @@ venv.bak/
 
 # Subversion
 .svn
+
+# visaplan project tools/setup
+update-module
+auto.msg
+scripts/
+init
+init.vim

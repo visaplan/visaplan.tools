@@ -16,6 +16,7 @@ __all__ = [
            'NoneOrInt',
            'NoneOrString',
            'IntOrOther',
+           'translate_dummy',
            ]
 # -------------------------------------------- [ Daten ... [
 LOWER_TRUE = frozenset('yes y ja j true on'.split() +
@@ -163,6 +164,22 @@ def IntOrOther(val):
         return int(val)
     except ValueError:
         return val
+
+
+def translate_dummy(s, *args, **kwargs):
+    """
+    Eine Dummy-Funktion, die den übergebenen String unverändert zurückgibt.
+    Zu verwenden, wenn eine _-Funktion eigentlich nichts zu tun hat -
+    Standardfall: die Übersetzung wird vom message-Adapter erledigt -,
+    aber zum Auffinden der Message-IDs benötigt wird.
+
+    Um jegliche weitere Argumente zuzulassen, die der Parser ggf.
+    auswertet (z. B. 'mapping'), werden diese ignoriert.
+
+    >>> translate_dummy('test')
+    'test'
+    """
+    return s
 
 
 if __name__ == '__main__':

@@ -24,6 +24,7 @@ __all__ = [
            'makeListOfStrings',
            'makeSet',          # verdaut auch None usw.
            'groupstring',      # wie tomcom-Adapter groupstring
+           'join_stripped',
            # --------------- ] ... aus unitracc.tools.misc ]
            ]
 
@@ -281,6 +282,38 @@ def groupstring(s, size=2):
             for i in xrange(0, len(s), size)
             ]
 # -------------------------- ] ... aus unitracc.tools.misc ]
+
+
+def join_stripped(dic, keys, joiner=' ', strict=True):
+    r"""
+    Fügt diejenigen Werte aus dem übergebenen Dict zusammen, die einen
+    (nach Anwendung der strip-Methode) nicht-leeren Stringwert haben;
+    der Standard-"Joiner" ist ein Leerzeichen.
+
+    >>> dic = {'text': ' ein  Text ', 'rest': ' (der  Rest) '}
+    >>> KEYS = ['text', 'rest']
+    >>> join_stripped(dic, KEYS)
+    'ein  Text (der  Rest)'
+
+    Der Joiner kommt nur zum Tragen, wenn mindestens zwei Schlüssel nicht-leere
+    Werte haben:
+    >>> join_stripped({'text': ' der Text ', 'rest': ' \t'}, KEYS, '\n')
+    'der Text'
+
+    Es wird davon ausgegangen, daß die Schlüssel existieren,
+    und daß die Werte Strings sind (z. B. bei der Verarbeitung des
+    groupdict-Ergebnisses eines RE-Match-Objekts).
+    """
+    res = []
+    for k in keys:
+        try:
+            v = dic[k].strip()
+            if v:
+                res.append(v)
+        except KeyError:
+            if strict:
+                raise
+    return joiner.join(res)
 
 
 if __name__ == '__main__':

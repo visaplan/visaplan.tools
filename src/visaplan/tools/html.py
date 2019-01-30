@@ -65,7 +65,7 @@ for entity_name in WHITESPACE_ENTITY_NAMES:
 # print sorted(WHITESPACE)
 
 
-def collapse_whitespace(s, preserve_edge=True, charset='utf-8'):
+def collapse_whitespace(s, preserve_edge=True):
     r"""
     Für Konversion von HTML zu text/plain:
     Kollabiere jeglichen Leerraum des übergebenen Strings.
@@ -77,7 +77,6 @@ def collapse_whitespace(s, preserve_edge=True, charset='utf-8'):
     preserve_edge - Wenn True (Vorgabe), wird Leerraum am Anfang und Ende
                     (wie im Innern) kollabiert;
                     wenn False, wird er entfernt.
-    charset - Vorgabewert: 'utf-8'
 
     >>> html = '  <div> <p>  Bla\n  Blubb  </p> </div>  '
     >>> collapse_whitespace(html)
@@ -90,10 +89,17 @@ def collapse_whitespace(s, preserve_edge=True, charset='utf-8'):
     ...              ) % entity
     >>> collapse_whitespace(footertxt)
     u'http://www.unitracc.de | http://www.unitracc.com'
+
+    Achtung: die Unterstützung des charset-Arguments wurde hier vorsätzlich
+    entfernt:
+    - es wurde nie verwendet
+    - wenn so eine Option einmal in der Welt ist, wird man sie nicht mehr los
+    - es ist ohnehin schlauer, die Decodierung vorab oder mit einer zu
+      übergebenden Funktion zu erledigen
     """
     buf = []
     has_whitespace = False
-    for ch in unicode_without_bom(s):
+    for ch in _unicode_without_bom(s):
         if ch in WHITESPACE:
             if buf or preserve_edge:
                 has_whitespace = True
@@ -107,25 +113,25 @@ def collapse_whitespace(s, preserve_edge=True, charset='utf-8'):
     return u''.join(buf)
 
 
-def unicode_without_bom(s, charset='utf-8'):
+def _unicode_without_bom(s, charset='utf-8'):
     r"""
     Gib die übergebene Zeichenkette als Unicode-String zurück
     und entferne eine etwaige Byte-Order-Markierung (BOM; vim: set bomb?)
 
-    >>> unicode_without_bom('abc')
+    >>> _unicode_without_bom('abc')
     u'abc'
     >>> BOM_UTF8
     '\xef\xbb\xbf'
-    >>> unicode_without_bom('\xef\xbb\xbfÄh')
+    >>> _unicode_without_bom('\xef\xbb\xbfÄh')
     u'\xc4h'
-    >>> unicode_without_bom(u'def')
+    >>> _unicode_without_bom(u'def')
     u'def'
     """
     if isinstance(s, unicode):
         return s
     # BOM-Präfix ist kein Unicode, sondern eine Bytes-Folge
     # --> implizit ausgelöste Decodierung von s
-    # --> schlägt fehl bei Umlauten und Standard-Encoding ASCII  
+    # --> schlägt fehl bei Umlauten und Standard-Encoding ASCII
     # ... also oben Unicode vorab behandeln
     if s.startswith(BOM_UTF8):
         s = s[len(BOM_UTF8):]

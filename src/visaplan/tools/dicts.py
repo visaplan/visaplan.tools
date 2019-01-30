@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*- vim: ts=8 sts=4 sw=4 si et tw=79
 """\
-Tools für Formulare
+Tools für Python-Dictionarys
 """
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
@@ -10,11 +10,16 @@ __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 from collections import defaultdict
 from string import strip
 
+from visaplan.tools.minifuncs import NoneOrString
 
 __all__ = (
            'subdict',
            'subdict_onekey',
            'subdict_forquery',
+           # Ergänzung von Schlüsseln:
+           'make_key_injector',
+           # Extraktion von Werten, mit Vorgabe und Factorys:
+           'getOption',  # von einem Dict (z. B. für Transmogrifier)
            # kleine Helferlein:
            'updated',  # ungefähr analog sorted; für dict-Objekte
            )
@@ -199,6 +204,60 @@ def subdict_forquery(*args, **kwargs):
     return res
 
 
+# ------------ [ aus Products.unitracc.tools.visaplan.tools.misc ... [
+# (alter Name: key_injector)
+def make_key_injector(srckey, func, destkey, errmask):
+    """
+    Erzeuge eine Subroutine, die das übergebene dict-Objekt um einen
+    Schlüssel mit Wert ergänzt, der mit Hilfe der übergebenen Funktion
+    berechnet wird:
+    "Verwende <func>, um für jedes <dic> aus <dic>[<srckey>] den Wert
+    <dic>[<destkey>] zu ermitteln.
+    Die Funktion <func> gibt ein dict zurück, das den Schlüssel <destkey>
+    enthält; der verwiesene Wert wird verwendet.
+    Verwende im Fehlerfall die Textmaske <errmask>, um aus <dic> eine Text zu
+    erzeugen, der anstelle eines "richtigen" Werts verwendet wird."
+
+    >>> dic = {'group_id': 'group_abc'}
+    >>> srckey = 'group_id'
+    >>> func = lambda x: {'group_title': '%s-Gruppe' % x.split('_', 1)[-1].upper()}
+    >>> destkey = 'group_title'
+    >>> errmask = 'Unknown group "%(group_id)s"'
+    >>> extend = key_injector(srckey, func, destkey, errmask)
+    >>> extend(dic)
+    >>> dic
+    {'group_id': 'group_abc', 'group_title': 'ABC-Gruppe'}
+
+    Im Unterschied zu den dict-Klassen aus visaplan.tools.classes wird hier keine
+    dict-Unterklasse angelegt, sondern eine Hilfsfunktion zur Manipulation
+    völlig gewöhnlicher dict-Objekte erzeugt.
+    """
+    cachedict = {}
+
+    def inject_key(dic):
+        # das übergebene dict hat *immer* den Schlüssel <srckey>:
+        valin = dic[srckey]
+        try:
+            dic[destkey] = cachedict[valin]
+            # print valin, '-->', cachedict[valin]
+        except KeyError:
+            try:
+                gotdic = func(valin)
+            except KeyError:
+                # evtl. noch weitere Exceptions abfangen; im Anwendungsfall
+                # "Gruppeninformationen ermitteln" tritt bei nicht vorhandenen
+                # Gruppen ein KeyError auf
+                valout = errmask % dic
+            else:
+                # das Ergebnis-dict hat *immer* den Schlüssel <destkey>:
+                valout = gotdic[destkey]
+            cachedict[valin] = valout
+            # print valin, '==>', valout
+            dic[destkey] = valout
+    return inject_key
+# ------------ ] ... aus Products.unitracc.tools.visaplan.tools.misc ]
+
+
 def updated(dic, **kwargs):
     """
     Gib das übergebene dict mit etwaigen Modifikationen zurück
@@ -223,6 +282,105 @@ def updated(dic, **kwargs):
     res = dict(dic)
     res.update(kwargs)
     return res
+
+
+# --------------------------- [ aus Products.unitracc.tools.misc ... [
+def getOption(odict, key, default=None, factory=NoneOrString,
+              choices=None,
+              use_default=2,
+              label=None,
+              reverse=None):
+    r"""
+    Z. B. für Transmogrifier: Optionenauswertung mit Behandlung der Frage von
+    nicht oder leer angegebenen Werten
+
+    odict - ein dict mit Optionen; als Werte werden Strings erwartet, die ggf.
+            mit der jeweils angegebenen factory konvertiert werden.
+    key - der Optionsname
+    default - siehe auch use_default. Wenn ein String, wird ggf. die
+              factory-Funktion angewendet.
+    factory - Funktion zur Transformation von Strings
+    choices - für string-Optionen: erlaubte Werte.
+              Wenn indizierbar, wird ggf. der erste Wert als Vorgabe verwendet
+    use_default -
+        wenn >= 1, verwenden wenn kein Wert vorhanden
+        wenn >= 2, auch dann, wenn ein leerer Wert (Leerstring) vorhanden ist
+    label - IGNORIERT
+              (in Dict-Objekten, die zum Aufruf verwendet werden, ggf. die
+              Beschriftung einer Option)
+    reverse - IGNORIERT
+              (in Dict-Objekten, die zum Aufruf verwendet werden, ggf. eine
+              "Umkehrfunktion" zur <factory> - also z.B. string_of_list zur
+              Factory makeListOfStrings)
+
+    >>> o = dict(path='\n\n eins \n', doit='  yes ')
+    >>> getOption(o, 'path')
+    'eins'
+    >>> from visaplan.tools.lands0 import makeListOfStrings
+    >>> getOption(o, 'path', None, makeListOfStrings)
+    ['eins']
+    >>> getOption(o, 'nowhere', None, makeListOfStrings)
+    >>> from visaplan.tools.minifuncs import makeBool, NoneOrInt
+    >>> getOption(o, 'doit', 'no', makeBool)
+    True
+    >>> getOption(o, 'doit', factory=makeBool)
+    True
+    >>> getOption(o, 'gipsnich', factory=makeBool)
+    >>> getOption(o, 'gipsnich', factory=makeBool, default='false')
+    False
+    >>> getOption(o, 'max-recursions', factory=NoneOrInt)
+    >>> getOption(o, 'max-recursions', '10', factory=NoneOrInt)
+    10
+    >>> getOption(o, 'path', choices=('eins', 'zwei'))
+    'eins'
+    >>> getOption(o, 'path', choices=('zwei', 'drei')) # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+        ...
+    ValueError: 'eins': only one of ('zwei', 'drei') allowed!
+    >>> getOption(o, 'path', default='eins', choices=('zwei', 'drei'))
+    'eins'
+    >>> o['empty'] = ' '
+    >>> getOption(o, 'empty', '', choices=('eins', 'zwei'))
+    """
+    if key not in odict:
+        if use_default >= 1:
+            if factory is None:
+                return default
+            if default is None:
+                return default
+            return factory(default)
+        else:
+            raise KeyError(key)
+    val = odict[key]
+    if factory is not None and isinstance(val, basestring):
+        val = factory(val)
+    if choices:
+        try:
+            if default is None and use_default >= 1:
+                default = choices[0]
+        except TypeError:  # z. B. choices ist ein Set:
+            pass
+    if val is None and use_default >= 2:
+        if factory is None:
+            val = default
+        else:
+            val = factory(default)
+    if choices:
+        if val in choices:
+            return val
+        if default is not None:
+            # also angegeben; nach Anwendung einer factory-Funktion ist auch
+            # None möglich:
+            if factory is None:
+                if val == default:
+                    return val
+            else:
+                if val == factory(default):
+                    return val
+        raise ValueError("%(val)r: only one of %(choices)s allowed!"
+                         % locals())
+    return val
+# --------------------------- ] ... aus Products.unitracc.tools.misc ]
 
 
 if __name__ == '__main__':

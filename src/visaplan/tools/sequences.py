@@ -6,7 +6,7 @@ Tools for sequences
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
            4,  # make_safe_decoder, nun --> .coding
-           9,  # unique_union
+           10, # make_names_tupelizer, make_dict_sequencer
            )
 __version__ = '.'.join(map(str, VERSION))
 
@@ -17,7 +17,11 @@ __all__ = [
            'matrixify',
            'next_of',
            'nonempty_lines',
+           # aus Products.unitracc.tools.misc:
            'unique_union',
+           'make_names_tupelizer',
+           'make_dict_sequencer',
+           'columns',
            ]
 
 
@@ -195,6 +199,205 @@ def nocomments_split(s):
         for word in line.split():
             res.append(word)
     return res
+
+
+# --------------------------- [ aus Products.unitracc.tools.misc ... [
+def make_names_tupelizer(forbidden,
+                         onerror='error',
+                         logger=None):
+    """
+    Erzeuge eine Funktion, die aus einer Sequenz von Feldnamen ein sortiertes
+    Tupel erzeugt
+
+    >>> forbidden='href getURL getPath'.split()
+    >>> class Logger:
+    ...     def error(self, *args, **kwargs):
+    ...         pass
+    >>> logger = Logger()
+    >>> nice = make_names_tupelizer(forbidden, onerror='remove', logger=logger)
+    >>> nice(['href', 'Title'])
+    ('Title',)
+    >>> strict = make_names_tupelizer(forbidden, onerror='error', logger=logger)
+    >>> strict(['href', 'Title'])
+    Traceback (most recent call last):
+      ...
+    ValueError: Forbidden names found! (set(['href'])
+
+    """
+    forbidden = set(forbidden)
+
+    def strict(liz):
+        if isinstance(liz, basestring):
+            raise TypeError('non-string sequence expected; got: %(liz)r'
+                            % locals())
+        unique = set(liz)
+        invalid = unique.intersection(forbidden)
+        if invalid:
+            raise ValueError('Forbidden names found! (%(invalid)r'
+                             % locals())
+        return tuple(sorted(unique))
+
+    def forgiving(liz):
+        if isinstance(liz, basestring):
+            raise TypeError('non-string sequence expected; got: %(liz)r'
+                            % locals())
+        unique = set(liz)
+        invalid = unique.intersection(forbidden)
+        if invalid:
+            logger.error('make_names_tupelizer: removing invalid names'
+                         ' %(invalid)s', locals())
+            unique.difference_update(invalid)
+        return tuple(sorted(unique))
+
+    if onerror == 'error':
+        return strict
+    elif onerror == 'remove':
+        if logger is None:
+            raise ValueError('onerror=%(onerror)r: logger needed'
+                             % locals())
+        return forgiving
+    else:
+        raise ValueError('onerror=%(onerror)r (error or remove expected)'
+                         % locals())
+
+
+def make_dict_sequencer(firstkey=None,
+                        key='key', val_key='val',
+                        selected_key='selected',
+                        convert_nondict=None,
+                        **kwargs):
+    """
+    Erzeuge eine Funktion, die ein Dict in eine Sequenz von Dicts umwandelt
+    (z. B., um ein Formular zu generieren).
+
+    >>> raw1 = {'default': 'Vorgabe', 'other': 'Abweichung'}
+    >>> raw1copy = dict(raw1)
+    >>> convert = make_dict_sequencer('default')
+    >>> list(convert(raw1))
+    [{'key': 'default', 'val': 'Vorgabe'}, {'key': 'other', 'val': 'Abweichung'}]
+
+    Durch die Verarbeitung wird (wenn firstkey nicht None ist) das Eingabe-Dict
+    geändert:
+
+    >>> raw1 != raw1copy
+    True
+
+    Wenn das Dict schon Dicts enthält, erfolgt eine Konsistenzprüfung:
+
+    >>> def si(dic):
+    ...     return sorted(dic.items())
+    >>> gen1 = convert({'default': {'key': 'default', 'val': 'Vorgabe 2'},
+    ...                 'other': {'val': 'Abweichung 2'}})
+    >>> list([si(dic) for dic in gen1])
+    [[('key', 'default'), ('val', 'Vorgabe 2')], [('key', 'other'), ('val', 'Abweichung 2')]]
+    >>> gen2 = convert({'default': {'key': 'FEHLER', 'val': 'Vorgabe 2'},
+    ...                 'other': {'val': 'Abweichung 2'}})
+
+    Zunächst wird nur der Generator erzeugt; beim Iterieren fällt der Fehler
+    dann auf:
+    >>> list([si(dic) for dic in gen2])
+    Traceback (most recent call last):
+      ...
+    ValueError: item={'val': 'Vorgabe 2', 'key': 'FEHLER'}, item['key']='FEHLER', thiskey='default'
+
+    >>> gen3 = convert({'default': {'key': 'default', 'val': 'Vorgabe 2'},
+    ...                 'other': {'val': 'Abweichung 2'}}, curval='other')
+    >>> list([si(dic) for dic in gen3])
+    [[('key', 'default'), ('selected', False), ('val', 'Vorgabe 2')], [('key', 'other'), ('selected', True), ('val', 'Abweichung 2')]]
+    """
+    if convert_nondict is None:
+        def convert_nondict(val):
+            return {val_key: val}
+
+    def checked_item_1(item, thiskey, k, vk):
+        if not isinstance(item, dict):
+            item = convert_nondict(item)
+        # der Schlüssel k ist in item schon vorhanden
+        if k in item:
+            if item[k] != thiskey:
+                raise ValueError('item=%r, item[%r]=%r, thiskey=%r'
+                                 % (item, k, item[k], thiskey,
+                                    ))
+        item[k] = thiskey
+        return item
+
+    def checked_item_2(item, thiskey, k, vk, curval):
+        if not isinstance(item, dict):
+            item = convert_nondict(item)
+        # der Schlüssel k ist in item schon vorhanden
+        if k in item:
+            if item[k] != thiskey:
+                raise ValueError('item=%r, item[%r]=%r, thiskey=%r'
+                                 % (item, k, item[k], thiskey,
+                                    ))
+        item[k] = thiskey
+        item[selected_key] = thiskey == curval
+        return item
+
+    def dict_to_dicts_sequence(dic, curval=None):
+        args = [key, val_key]
+        if curval is None:
+            checked_item = checked_item_1
+        else:
+            checked_item = checked_item_2
+            args.append(curval)
+        if firstkey is not None:
+            item = dic.pop(firstkey)
+            yield checked_item(item, firstkey, *args)
+
+        for k in sorted(dic.keys()):
+            item = dic[k]
+            if not isinstance(item, dict):
+                item = convert_nondict(item)
+            yield checked_item(item, k, *args)
+
+    return dict_to_dicts_sequence
+
+
+def columns(seq, *args):
+    """
+    Gib soviele "Spalten" (i.e. Listen) von Elementen zurück
+    wie weitere Argumente (nach der Sequenz) übergeben wurden, in der Regel: 2.
+    Jedes Argument muß eine ganze Zahl sein;
+    nur das letzte darf 0 sein.
+
+    >>> columns(map(int, list('1234567')), 2, 3)
+    ([1, 2], [3, 4, 5])
+    >>> columns(map(int, list('1234567')), 2, 0)
+    ([1, 2], [])
+    >>> columns(map(int, list('1')), 2, 3)
+    ([1], [])
+    """
+    assert args, 'columns(%r, *args): ganze Zahlen erwartet' % (seq, )
+    res = []
+    argl = list(args)
+    i = 0
+    for item in seq:
+        if i == 0:
+            if not argl:
+                break
+            lastlist = []
+            res.append(lastlist)
+            thismax = argl.pop(0)
+            assert isinstance(thismax, int), \
+                    '%r: ganze Zahl erwartet' % (thismax, )
+            if thismax == 0:
+                assert not argl, \
+                        ('columns(%r, %s): 0 nur als letztes Argument erlaubt!'
+                         ' (%s)'
+                         % (seq, ', '.join(map(str, args)), argl))
+                continue
+        lastlist.append(item)
+        i += 1
+        if i >= thismax:
+            if argl:
+                i = 0
+            else:
+                break
+    for i in range(len(res), len(args)):
+        res.append([])
+    return tuple(res)
+# --------------------------- ] ... aus Products.unitracc.tools.misc ]
 
 
 if __name__ == '__main__':

@@ -11,21 +11,53 @@ This is a collection of utility modules for Python projects.
 Features
 --------
 
-- "classes" module:
+- ``coding`` module:
 
-  Several classes derived from Python dicts, e.g. Mirror and Proxy.
+  Factory functions to create ``safe_encode`` resp. ``safe_decode`` functions as needed
 
-- "html" module:
+- ``classes`` module:
 
-  - HtmlEntityProxy - a dict which returns unicode characters when given a named HTML entity
+  Several simple but useful classes derived from Python dicts, e.g. ``Mirror`` and ``Proxy``
 
-- "http" module:
+- ``debug`` module:
 
-  - extract_hostname (using url.split and raising ValueError)
+  - ``trace_this`` decorator
 
-- "coding" module:
+- ``dicts`` module:
 
-  Factory functions to create safe_encode resp. safe_decode functions as needed
+  - several tools to work with standard dictionaries
+
+- ``files`` module:
+
+  - functions related to files; for now ``make_mtime_checker``
+
+- ``html`` module:
+
+  - ``HtmlEntityProxy`` - a dict which returns unicode characters when given a named HTML entity
+
+- ``http`` module:
+
+  - ``extract_hostname`` (using ``url.split`` and raising ``ValueError``)
+
+- ``lands0`` module:
+
+  - several tools to work with *lists and strings*
+
+- ``minifuncs`` module:
+
+  - very small functions, for some cases where functions are used as arguments
+
+- ``profile`` module:
+
+  - a ``StopWatch`` context manager and ``@profile`` decorator
+
+- ``sequences`` module:
+
+  - tools for sequences, e.g. ``inject_indexes``
+
+- ``times`` module:
+
+  - functions related to date and/or time calculations
 
 
 Documentation
@@ -71,4 +103,4 @@ please use the issue tracker mentioned above.
 License
 -------
 
-The project is licensed under the Apache Software License.
+The project is licensed under the GNU General Public License v2 (GPLv2).

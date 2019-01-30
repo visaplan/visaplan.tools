@@ -1,40 +1,69 @@
 #!/bin/bash
 me="$0"
+MYDIR="$(dirname "$me")"
+. "$MYDIR/scripts/shelltools.sh"
+. "$MYDIR/scripts/x-funcs.sh"
 
+MYPRODUCT='visaplan.tools'
+# siehe auch --> USUAL_SUBPATH
+DEFAULT_SRC_PRODUCT='Products.unitracc'
+DEFAULT_SRC_BRANCH='v3_0'
+# viele Tools-Module sind in unitracc-split nicht mehr vorhanden:
+DEFAULT_MONOLITH_BRANCH='unitracc-staging2'
 SVN_BASE='svn+ssh://svn.visaplan.com/unitracc'
-UNITRACC_BASE='/projects/unitracc'
-SOURCE_PATH='Products/unitracc/tools'
-DEST_PATH='src/visaplan/tools'
+DEST_PATH="src/$(echo "$MYPRODUCT" | sed 's,\.,/,g')"
+MSGFILE="$MYDIR/auto.msg"
 
 # ----------------------------------------------- [ Vorgeplänkel ... [
 # --------------------------------- [ allgemeine Funktionen ... [
-ok=1
-TOP_PID=''
-function err() {
-    echo -e "\x1b[;1;31m$me:E $@\x1b[m" >&2
-    ok=0
-}
-
-function warn() {
-    echo -e "\e[1;33;40m$me:W $@ \x1b[m" >&2
-}
-
-function info() {
-    echo -e "\e[;1m$me:i $@\x1b[m" >&2
-}
-
-function info2stdout() {
-    echo -e "\e[;1m$me:i $@\x1b[m"
+function filewarning() {
+	if [ -d "$1" ]; then
+		return 0
+	elif [ -f "$1" ]; then
+		warn "*Datei* gefunden: '$1'"
+	elif [ -e "$1" ]; then
+		warn "*Dingsda* gefunden: '$1'"
+		ls -ld "$1"
+	else
+		warn "Nicht gefunden: '$1' (und daher Typ unbekannt)"
+	fi
+	warn "Es wird empfohlen, Zusammenführungen stets auf Verzeichnisebene durchzuführen."
+	confirm "Trotzdem durchführen?"
 }
 # --------------------------------- ] ... allgemeine Funktionen ]
 
 # ---------------------------------- [ spezielle Funktionen ... [
-function check_trunk() {
-	local newspec="$UNITRACC_BASE/trunk"
-	if [ -z "$SOURCE_ROOT" ]; then
-		SOURCE_ROOT="$newspec"
+function check_product() {
+	local newspec="$1" givenarg="$2"
+	if [ -n "$FROMMONOLITH" ]; then
+		err "$givenarg: Es wurde schon --monolith angegeben!"
+		return 1
+	elif [ -z "$FROMPRODUCT" ]; then
+		FROMPRODUCT="$newspec"
 		return 0
-	elif [ "$newspec" == "$SOURCE_ROOT" ]; then
+	elif [ "$newspec" == "$FROMPRODUCT" ]; then
+		return 0
+	else
+		err "$givenarg: Doppelte Angabe des Quellproducts ($FROMPRODUCT)"
+		return 1
+	fi
+}
+
+function check_monolith() {
+	if [ -z "$FROMPRODUCT" ]; then
+		FROMMONOLITH='x'
+	else
+		err "--monolith: Es wurde schon das Quellprodukt '$FROMPRODUCT' angegeben!"
+		return 1
+	fi 
+}
+
+function check_trunk() {
+	local newspec="trunk"
+	if [ -z "$BRANCHSPEC" ]; then
+		BRANCHSPEC="$newspec"
+		return 0
+	elif [ "$newspec" == "$BRANCHSPEC" ]; then
 		return 0
 	else
 		err "Doppelte Angabe der Quelle (--trunk)"
@@ -43,11 +72,11 @@ function check_trunk() {
 }
 
 function check_branch() {
-	local newspec="$UNITRACC_BASE/branches/$1"
-	if [ -z "$SOURCE_ROOT" ]; then
-		SOURCE_ROOT="$newspec"
+	local newspec="branches/$1"
+	if [ -z "$BRANCHSPEC" ]; then
+		BRANCHSPEC="$newspec"
 		return 0
-	elif [ "$newspec" == "$SOURCE_ROOT" ]; then
+	elif [ "$newspec" == "$BRANCHSPEC" ]; then
 		return 0
 	else
 		err "Doppelte Angabe des Quellzweigs (--branch=$1)"
@@ -55,90 +84,190 @@ function check_branch() {
 	fi
 }
 
+function add_part() {
+	local dest="$1"
+	if [ -z "$dest" ]; then
+		err "Part ist leer: '$dest'"
+		return 1
+	fi
+	if ! [ -e "$dest" ]; then
+		err "Nicht gefunden: '$dest'"
+		return 1
+	fi
+	if [ -z "$PARTS" ]; then
+		PARTS="$dest"
+	else
+		PARTS="$PARTS $dest"
+	fi
+} # ... add_part
+
+# nun eine Hilfsfunktion für merge_part:
 function add_copied() {
-	if [ -z "$SAMENAME" ]; then
-		SAMENAME="$1"
-	else
-		SAMENAME="$SAMENAME $1"
-	fi
+	src=$(echo "$1" | sed "s,^$DEST_PATH,$USUAL_SUBPATH,")
+	# wird derzeit gar nicht verwendet:
+	thetail=$(echo "$1" | sed "s,^$DEST_PATH/,,")
 }
 
+# nun eine Hilfsfunktion für merge_part:
 function add_renamed() {
-	if [ -z "$RENAMED" ]; then
-		RENAMED="$1"
+	src=$(echo "$1" | sed "s,^$1,$USUAL_SUBPATH/$2,")
+	# wird derzeit gar nicht verwendet, daher vorerst wie in add_copied
+	thetail=$(echo "$1" | sed "s,^$DEST_PATH/,,")
+}
+
+function merge_part() {
+	local dest="$1" src thetail success=''
+	case "$dest" in
+			# um $DEST_PATH/__init__.py zu ignorieren:
+			# svn merge ^/products/visaplan.plone.tools/branches/v1_0 . -c22748
+		scripts/*)
+			filewarning "$dest" || return 1
+			src="$dest"
+			thetail=''
+			;;
+		$DEST_PATH/__init__.py)
+			warn "Ignoring '$dest'"
+			return 1
+			;;
+		$DEST_PATH/csvfiles.py)
+			add_copied "$dest"
+			;;
+		$DEST_PATH/classes.py)
+			add_copied "$dest"
+			;;
+		$DEST_PATH/files.py)  # bis auf id_of
+			add_copied "$dest"
+			;;
+		$DEST_PATH/html.py)
+			add_copied "$dest"
+			;;
+		$DEST_PATH/http.py)
+			add_copied "$dest"
+			;;
+		$DEST_PATH/mock.py)
+			add_copied "$dest"
+			;;
+		$DEST_PATH/profile.py)
+			add_copied "$dest"
+			;;
+		# hier läßt sich die Einzelmassage evtl. nicht vermeiden:
+		$DEST_PATH/coding.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			add_renamed "$dest" misc.py
+			;;
+		$DEST_PATH/dates.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			add_renamed "$dest" forms.py
+			;;
+		$DEST_PATH/minifuncs.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			add_renamed "$dest" misc.py
+			;;
+		$DEST_PATH/sequences.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			add_renamed "$dest" misc.py
+			;;
+		$DEST_PATH/times.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			add_renamed "$dest" misc.py
+			;;
+		$DEST_PATH/debug.py)
+			# TODO: auch debug.py in Betracht ziehen
+			add_renamed "$dest" debug2.py
+			;;
+		$DEST_PATH/dicts.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			add_renamed "$dest" forms.py
+			;;
+		$DEST_PATH/lands0.py)
+			# Achtung, nur ein kleiner Teil von ...:
+			add_renamed "$dest" forms.py
+			;;
+		$DEST_PATH|$DEST_PATH/)
+			if [ -z "$REVARGS" ]; then
+				err "Quelle '$dest' erfordert die Angabe von Revisionen (wirklich keine Kopie)!"
+				return 1
+			fi
+			add_copied "$dest"
+			;;
+		$DEST_PATH/*)
+			filewarning "$dest" || return 1
+			add_copied "$dest"
+			;;
+		*)
+			err "Unbekanntes Ziel: '$dest'"
+			return 1
+	esac
+	# -------- [ Behandlung etwaiger Umbenennungen ... [
+	# -------- ] ... Behandlung etwaiger Umbenennungen ]
+	echo svn merge $SVNARGS "$SOURCE_ROOT/$src $dest ..."
+	DONE_ANYTHING='x'
+	if svn merge $SVNARGS "$SOURCE_ROOT/$src" "$dest"; then
+		success='x'
 	else
-		RENAMED="$RENAMED $1"
+		err "Fehler bei Nachführung von Änderungen; RC=$?"
+		svn propget svn:mergeinfo "$dest" | grep "$SOURCE_FILTER"
+		svn update "$dest"
+		svn-status "$dest"
+		return 1
 	fi
-}
-
-function merge_copied() {
-	local mod="$1"
-	echo svn merge $SVNARGS "^$SOURCE_ROOT/$SOURCE_PATH/$mod $DEST_PATH/$mod ..."
-	DONE_ANYTHING='x'
-	svn merge $SVNARGS "^$SOURCE_ROOT/$SOURCE_PATH/$mod" "$DEST_PATH/$mod" && return
-	err "Fehler bei Integration von Änderungen für $mod!"
-}
-
-function merge_renamed() {
-	local src="$1" mod="$2"
-	echo svn merge $SVNARGS "^$SOURCE_ROOT/$SOURCE_PATH/$src $DEST_PATH/$mod ..."
-	DONE_ANYTHING='x'
-	svn merge $SVNARGS "^$SOURCE_ROOT/$SOURCE_PATH/$src" "$DEST_PATH/$mod" && return
-	err "Fehler bei Integration von Änderungen für $mod aus $src!"
+	echo "Änderungen für $dest:" >> "$MSGFILE"
+	# info "*** dest='$dest' SOURCE_FILTER='$SOURCE_FILTER' MSGFILE='$MSGFILE'"
+	svn diff --depth=empty --properties-only "$dest" \
+		| grep "$SOURCE_FILTER" \
+		>> "$MSGFILE"
+	if [ -n "$REVARGS" ]; then
+		svn log "$SOURCE_ROOT/$src" "$REVARGS" \
+		>> "$MSGFILE"
+	else
+		warn "Kein 'svn log' möglich, mangels Revisionsargument"
+	fi
+	if [ -n "$success" ]; then
+		return 0
+	fi
+	err "Fehler bei Integration von Änderungen für $dest!"
+	return 1
 }
 # ---------------------------------- ] ... spezielle Funktionen ]
 # ----------------------------------------------- ] ... Vorgeplänkel ]
 
 # ----------------------------------------- [ Argumentauswertung ... [
 SOURCE_ROOT=''
+# enthalten in SVNARGS, aber für Prüfung verfügbar:
+REVARGS=''
 SVNARGS=''
-FROMTRUNK=''
-FROMBRANCH=''
-SAMENAME=''
-RENAMED=''
+FROMPRODUCT=''
+FROMMONOLITH=''
+BRANCHSPEC=''
 PENDING=''
+PARTS=''
+# Optionen:
+ACCEPT='--accept=postpone'
 for arg in "$@"; do
 	if [ -z "$PENDING" ]; then
 		case "$arg" in
-# ------------------------------------ [ Angaben für Module ... [
-			$DEST_PATH/classes.py)
-				add_copied "$arg"
-				;;
-			$DEST_PATH/coding.py)
-				add_renamed "$arg"
-				;;
-			$DEST_PATH/debug.py)
-				add_renamed "$arg"
-				;;
-			$DEST_PATH/dicts.py)
-				add_renamed "$arg"
-				;;
-			$DEST_PATH/files.py)  # bis auf id_of
-				add_copied "$arg"
-				;;
-			$DEST_PATH/html.py)
-				add_copied "$arg"
-				;;
-			$DEST_PATH/http.py)
-				add_copied "$arg"
-				;;
-			$DEST_PATH/lands0.py)
-				add_renamed "$arg"
-				;;
-			$DEST_PATH/minifuncs.py)
-				add_renamed "$arg"
-				;;
-			$DEST_PATH/sequences.py)
-				add_renamed "$arg"
-				;;
-			$DEST_PATH/times.py)
-				add_renamed "$arg"
-				;;
-# ------------------------------------ ] ... Angaben für Module ]
 			'--help'|'-h'|'-?'|'?')
 				HELP="$arg"
 				;;
 # ------------------------------------ [ spezielle Optionen ... [
+	# ------------------------ [ Angabe der Quelle ... [
+			--my)
+				check_product "$MYPRODUCT" "$arg"
+				;;
+			-p|--product)
+				PENDING="$arg"
+				;;
+			--product=*)
+				val=$(echo "$arg"|sed 's/--product=//')
+				check_product "$val" "$arg"
+				;;
+			-p*)
+				val=$(echo "$arg"|sed 's/-p//')
+				check_product "$val" "$arg"
+				;;
+			--monolith)
+				check_monolith
+				;;
 			-t|--trunk)
 				check_trunk
 				;;
@@ -153,27 +282,36 @@ for arg in "$@"; do
 				val=$(echo "$arg"|sed 's/-b//')
 				check_branch "$val"
 				;;
+	# ------------------------ ] ... Angabe der Quelle ]
 # ------------------------------------ ] ... spezielle Optionen ]
 # ------------------------------------------ [ svn-Optionen ... [
-			-[cv])
+			-[cr])
 				PENDING="$arg"
 				;;
-			-[cv]*)
+			-[cr]*)
+				REVARGS="$arg"
+				SVNARGS="$SVNARGS $arg"
+				;;
+	# ---------------------- [ Konfliktbereinigung ... [
+			--accept=*)
+				ACCEPT="$arg"
+				;;
+			--interactive)
+				ACCEPT=''
+				;;
+			--accept)
+				PENDING="$arg"
+				;;
+	# ---------------------- ] ... Konfliktbereinigung ]
+			--record-only)
 				SVNARGS="$SVNARGS $arg"
 				;;
 # ------------------------------------------ ] ... svn-Optionen ]
 			-*)
 				err "Unbekannte Option: '$arg'"
 				;;
-			*.py)
-				if [ -f "$arg" ]; then
-					err "Noch keine Angaben für Modul '$arg'"
-				else
-					err "Modul '$arg' nicht gefunden, und keine Angaben"
-				fi
-				;;
 			*)
-				err "Unbekanntes Argument: '$arg'"
+				add_part "$arg"
 		esac
 	else
 		case "$PENDING" in
@@ -181,8 +319,17 @@ for arg in "$@"; do
 				check_branch "$arg"
 				;;
 			-[cv])
+				REVARGS="$PENDING$arg"
 				SVNARGS="$SVNARGS $PENDING$arg"
 				;;
+			--accept)
+				ACCEPT="$PENDING=$arg"
+				;;
+	# ------------------------ [ Angabe der Quelle ... [
+			-p|--product)
+				check_product "$arg" "$PENDING $arg"
+				;;
+	# ------------------------ ] ... Angabe der Quelle ]
 		esac
 		PENDING=''
 	fi
@@ -191,24 +338,19 @@ if [ -n "$HELP" ]; then
 	cat <<- EOT
 ${me}: Übernahme von Änderungen aus dem Unitracc-Monolithen
 
-Aufruf: $(basename $me) {-t|-b branch} {-c...|-r...} modul.py [...] {-s quelle.py}
+Aufruf: $(basename $me) {-t|-b branch} {-c...|-r...} modul.py [...]
 
 Es werden die angegebenen Module modul.py anhand der Angaben (Stamm bzw. Zweig,
-Revision[en]) aktualisiert; sofern Module gegenüber dem Unitracc-Monolitzen
+Revision[en]) aktualisiert; sofern Module gegenüber dem Unitracc-Monolithen
 umbenannt wurden, wird die abweichende Quelle entsprechend verwendet.
-Manche Module wurden aus mehreren Quellmodulen zusammengestellt; bei diesen kann
-die Angabe der zu verwendenden Quelle nötig sein (-s quelle.py).
 
 Optionen:
+  -p, --product Änderung aus dem angegebenen "Produkt" bzw. Distributionspaket
   -t, --trunk   Änderungen aus dem Stamm
   -b zweig, --branch ...
                 Änderungen aus dem angegebenen Zweig
   -cREV, -rREV  Revisionsangaben wie für svn merge
   modul.py      Zu aktualisierendes Modul (lokaler Dateiname).
-                Es können -- solange nicht unterschiedliche -s-Angaben benötigt
-                werden -- mehrere Module angegeben werden.
-  -s quelle.py  Angabe der zu verwendenden Quelle, wenn für ein konkretes Modul
-                mehrere infrage kommen
   -h, --help, -?
                 Ausgabe dieser Hilfe
 EOT
@@ -217,54 +359,105 @@ fi
 if [ -n "$PENDING" ]; then
 	err "$PENDING erwartet ein Argument"
 fi
+if [ -n "$ACCEPT" ]; then
+	SVNARGS="$SVNARGS $ACCEPT"
+fi
+if [ -z "$FROMPRODUCT" ]; then
+	check_monolith
+fi
+if [ -n "$FROMMONOLITH" ]; then
+	if [ -z "$BRANCHSPEC" ]; then
+		check_branch "$DEFAULT_MONOLITH_BRANCH"
+	fi
+	SOURCE_ROOT="^/projects/unitracc/$BRANCHSPEC"
+	USUAL_SUBPATH="Products/unitracc/tools"
+else
+	if [ -z "$BRANCHSPEC" ]; then
+		if [ -z "$FROMPRODUCT" -a -n "$DEFAULT_SRC_PRODUCT" ]; then
+			check_product "$DEFAULT_SRC_PRODUCT"
+		fi
+		if [ -n "$DEFAULT_SRC_PRODUCT" -a \
+			 -n "$DEFAULT_SRC_BRANCH"  -a \
+			 "$FROMPRODUCT" = "$DEFAULT_SRC_PRODUCT" ]; then
+			check_branch "$DEFAULT_SRC_BRANCH"
+		else
+			case "$FROMPRODUCT" in
+				''|"$MYPRODUCT")
+					check_product "$MYPRODUCT"
+					check_trunk
+					;;
+				Products.unitracc)
+					check_branch 'v3_1'
+					;;
+				visaplan.UnitraccCustom)
+					# skins/unitracc_templates	
+					check_branch 'v1_2'
+					;;
+				visaplan.UnitraccResource)
+					check_branch 'v1'
+					;;
+				visaplan.UnitraccSkins)
+					check_branch 'v1_0'
+					;;
+				*)
+					info "Keine --branch-Vorgabe für '$FROMPRODUCT'"
+					err "Bitte --branch oder --trunk angeben!"
+			esac
+		fi
+	fi
+	SOURCE_ROOT="^/products/$FROMPRODUCT/$BRANCHSPEC"
+	case "$PARTS" in
+		scripts|scripts/)
+			USUAL_SUBPATH='scripts'
+			;;
+		*)
+	case "$FROMPRODUCT" in
+		"$MYPRODUCT")
+			USUAL_SUBPATH="src/$(echo "$FROMPRODUCT" | sed 's,\.,/,g')"
+			;;
+		Products.unitracc)
+			USUAL_SUBPATH="src/$(echo "$FROMPRODUCT" | sed 's,\.,/,g')/tools"
+			;;
+		*)
+			err "Produkt '$FROMPRODUCT': wo gibt es hier etwas für '$MYPRODUCT'?!"
+	esac
+	esac  # case "$PART" -- nur Änderungen aus scripts/?
+fi
+SOURCE_FILTER="$(echo "$SOURCE_ROOT" | sed 's/^\^/\\s*/')"
+if ! [ -d "$DEST_PATH" ]; then
+	err "Hu? Verzeichnis '$DEST_PATH' nicht gefunden!"
+fi
 if [ "$ok" -eq 0 ]; then
 	exit 1
 fi
-if [ -z "$SOURCE_ROOT" ]; then
-	check_trunk
-fi
 info "Quelle ist $SOURCE_ROOT"
+[ -z "$PARTS" ] && PARTS="$DEST_PATH"
 # ----------------------------------------- ] ... Argumentauswertung ]
 DONE_ANYTHING=''
-for mod in $SAMENAME; do
-	merge_copied "$mod"
-done
-for mod in $RENAMED; do
-	case "$mod" in
-		coding.py)
-			# Achtung, nur ein kleiner Teil von ...:
-			merge_renamed misc.py "$mod"
-			;;
-		minifuncs.py)
-			# Achtung, nur ein kleiner Teil von ...:
-			merge_renamed misc.py "$mod"
-			;;
-		sequences.py)
-			# Achtung, nur ein kleiner Teil von ...:
-			merge_renamed misc.py "$mod"
-			;;
-		times.py)
-			# Achtung, nur ein kleiner Teil von ...:
-			merge_renamed misc.py "$mod"
-			;;
-		debug.py)
-			# TODO: auch debug.py in Betracht ziehen
-			merge_renamed debug2.py "$mod"
-			;;
-		dicts.py)
-			# Achtung, nur ein kleiner Teil von ...:
-			merge_renamed forms.py "$mod"
-			;;
-		lands0.py)
-			# Achtung, nur ein kleiner Teil von ...:
-			merge_renamed forms.py "$mod"
-			;;
-		*)
-			err "Woher wurde '$mod' umbenannt?!"
-			;;
-	esac
-	DONE_ANYTHING='x'
+for part in $PARTS; do
+	merge_part "$part"
 done
 if [ -z "$DONE_ANYTHING" ]; then
 	err "Nichts zu tun!"
 fi
+# Abschließend die üblichen Konflikte bereinigen:
+CONFLICTS=$(conflicted-only) || CONFLICTS='ERROR'
+if [ "$CONFLICTS" == 'ERROR' ]; then
+	err 'Konnte Konflikte nicht ermitteln!'
+
+elif [ -n "$CONFLICTS" ]; then
+	# Baumkonflikte (hier gelöschte Ressourcen):
+	svn resolved \
+		$DEST_PATH/hubs.py \
+		$DEST_PATH/spoons.py \
+		$DEST_PATH/pdf
+	# hier Aufrufe von svn resolve{d, --accept=...}
+	if [ "$CONFLICTS" != 'ERROR' ]; then
+		svn status $CONFLICTS
+	fi
+else
+	info 'Keine Konflikte festgestellt.'
+fi
+# Beispiel für weitere Konfliktauflösung:
+# siehe Products.unitracc
+# vim: ts=4 sts=4 sw=4 noet si

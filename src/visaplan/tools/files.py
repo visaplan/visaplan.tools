@@ -99,7 +99,7 @@ def make_mtime_checker(logger=logger,
     if deletesiblings:
         splitfunc = kwargs.pop('splitfunc', splitext)
         siblingsuffix = kwargs.pop('siblingsuffix', '.*')
-        # zu verschonende Datei-Erweiterungen: 
+        # zu verschonende Datei-Erweiterungen:
         spareextlist = kwargs.pop('spareextlist', default_spareextlist)
         spareext = set()
         if spareextlist:

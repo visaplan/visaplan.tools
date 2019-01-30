@@ -14,11 +14,18 @@ Autor: Tobias Herp
 __all__ = [
            # ----------------------- [ aus unitracc.tools.debug2 ... [
            'pp',
-           'log_or_trace',
+           'log_or_trace',  # Universalwerkzeug; siehe auch trace_this
            # ----------------------- ] ... aus unitracc.tools.debug2 ]
            # ------------------------ [ aus unitracc.tools.debug ... [
+           'trace_this',    # ... für einfache Fälle
            'arginfo',
            'pretty_funcname',
+           'asciibox',        # Ausgabe
+           'asciibox_lines',  # ... dieser Liste
+           'print_indented',  # Ausgabe mit Einrückung
+           'make_sleeper',    # Ausgabe entschleunigen, mit Logging
+           # Metadekoratoren (Dekorator-Erzeuger):
+           'log_result',
            # ------------------------ ] ... aus unitracc.tools.debug ]
            ]
 
@@ -28,6 +35,7 @@ from functools import wraps
 from pprint import pformat, pprint
 from traceback import extract_stack
 from collections import defaultdict
+from time import sleep
 
 try:
     from visaplan.plone.tools.log import getLogSupport
@@ -40,6 +48,8 @@ _TRACE_SWITCH = defaultdict(gimme_False)
 # ------------------------------------------------------ ] ... Daten ]
 
 
+# ---------------------------------- [ aus unitracc.tools.debug2 ... [
+# ------------------------------------------ [ log_or_trace ... [
 class log_or_trace(object):
     """
     Meta-Dekorator für Funktionen: Gib einen Dekorator zurück, der die
@@ -64,7 +74,9 @@ class log_or_trace(object):
       ...
       @log_or_trace(**updated(lot_kwargs, trace=1))
       def ...
-      
+
+    Um einfach eine einzelne Funktion zu debuggen, bietet sich
+    alternativ die Funktion --> trace_this an.
     """
 
     def __init__(self, debug_level, **kwargs):
@@ -177,6 +189,7 @@ class log_or_trace(object):
             func = logging_wrapper
 
         return func
+# ------------------------------------------ ] ... log_or_trace ]
 
 
 def pp(*args, **kwargs):
@@ -205,8 +218,41 @@ def pp(*args, **kwargs):
     tup = (prefix % locals(),
            ) + args + tuple(kwargs.items())
     pprint(tup)
+# ---------------------------------- ] ... aus unitracc.tools.debug2 ]
+
 
 # ----------------------------------- [ aus unitracc.tools.debug ... [
+def trace_this(func):
+    """
+    Dekoratorfunktion für Entwicklung/Debugging:
+    - Information über das Betreten der Funktion und die Argumente
+    - anschließend pdb.set_trace()
+
+    Um das Debugging vom Entwicklungsmodus abhängig zu machen etc.,
+    kann stattdessen der mit Argumenten zu verwendende Dekorator -->
+    log_or_trace verwendet werden.
+    """
+    NAME = func.__name__
+    AFTERDARK = '... %s -->' % NAME
+    LABEL = NAME + '('
+    from pprint import pprint
+
+    @wraps(func)
+    def inner(*args, **kwargs):
+        label = [LABEL] + list(args)
+        print asciibox(label, kwargs=kwargs)
+        import pdb
+        pdb.set_trace()  # --------- # @trace_this (sichtbarer Hinweis):
+        res = func(*args, **kwargs)  # [s]tep into
+        # TODO: - trace automatisch wieder zurücksetzen
+        #       - evtl. Ergebnisausgabe weiter aufhübschen
+        print AFTERDARK
+        pprint(res)
+        return res
+
+    return inner
+
+
 def arginfo(*args, **kwargs):
     """
     Stringdarstellung der übergebenen Argumente
@@ -242,6 +288,225 @@ def pretty_funcname(fo):
     if liz[-1] == 'adapter':
         return 'unitracc->%s' % liz[-2]
     return fo.__module__
+
+
+def log_result(logger=None, logfunc=None):
+    """
+    Gib eine Dekorator-Funktion zurück, die den Aufruf einer Funktion
+    und ihr Ergebnis einzeilig protokolliert
+    (z. B. für cachekey-Funktionen);
+    für einfache Funktionen, deren innere Logik weniger spannend ist als
+    das Faktum ihres Aufrufs.
+
+    Verwendung z. B.:
+
+      from visaplan.tools.debug import log_result
+      ...
+      @log_result(logger=logger)
+      def cachekey(...):
+         ...
+    """
+    if logfunc is None:
+        if logger is None:
+            logger = debug_logger
+        logfunc = logger.info
+    elif isinstance(logfunc, str):
+        if logger is None:
+            logger = debug_logger
+        logfunc = getattr(logger, logfunc)
+    elif logger is not None:
+        debug_logger.warning('logfunc given (%(logfunc)r), '
+                             'ignoring logger (%(logger)r)',
+                             locals())
+
+    def decorate(func):
+        MASK = '%s(...) --> %%(res)s' % (func.__name__,)
+
+        @wraps(func)
+        def inner(*args, **kwargs):
+            res = func(*args, **kwargs)
+            logfunc(MASK, locals())
+            return res
+        return inner
+
+    return decorate
+
+
+# ---------------------------- [ asciibox + Hilfsfunktionen ... [
+def gen_prefix(prefix, *args, **kwargs):
+    """
+    Hilfsfunktion für asciibox_lines:
+    Ab dem zweiten Argument (aus args oder kwargs) wird das Präfix durch
+    einen Leerstring gleicher Länge ersetzt.
+
+    >>> list(gen_prefix('func(', 'eins', 'zwei'))
+    ["func('eins'", "     'zwei'"]
+    """
+    first = True
+    if not args and not kwargs:
+        yield prefix
+        return
+    for a in args:
+        yield '%(prefix)s%(a)r' % locals()
+        if first:
+            prefix = ' ' * len(prefix)
+            first = False
+    for k, v in kwargs.items():
+        yield '%(prefix)s%(k)s=%(v)r' % locals()
+        if first:
+            prefix = ' ' * len(prefix)
+            first = False
+
+
+def gen_suffix(seq, ch=',', lastch=')'):
+    """
+    Hilfsfunktion für asciibox_lines:
+    Füge jedem Element der übergebenen Sequenz <seq> das Suffix <ch>
+    hinzu - bis auf das letzte, das <lastch> bekommt.
+
+    >>> list(gen_suffix(['eins', 'zwei']))
+    ['eins,', 'zwei)']
+    """
+    prev = None
+    first = True
+    for item in seq:
+        if first:
+            first = False
+        else:
+            yield prev + ch
+        prev = item
+    if not first:
+        yield item + lastch
+
+
+# ----------------------------------- [ asciibox_lines ... [
+def asciibox_lines(label, ch, width, kwargs):
+    """
+    Arbeitspferd für -> asciibox; testbar.
+
+    Das wichtigste Argument ist <label>.
+    Ein einzelner String wird zentriert:
+    >>> asciibox_lines('A', '*', 7, {})
+    ['*******', '*     *', '*  A  *', '*     *', '*******']
+
+    Die ersten und letzten beiden Teile sind vergleichsweise
+    uninteressant, weswegen wir sie für die weiteren Tests ignorieren.
+
+    Für Funktionsaufrufe mit unbenannten Argumenten: "foo" ist der Name
+    der Funktion; "foo(" als erstes Element einer Sequenz <label> löst
+    diese Interpretation aus:
+
+    >>> asciibox_lines(['foo(', 'ein string', 123], '*', 25, {})[2:-2]
+    ["*   foo('ein string',   *", '*       123)            *']
+
+    >>> asciibox_lines(['foo(', 'foo'], '*', 20, {'bar': 'baz'})[2:-2]
+    ["*  foo('foo',      *", "*      bar='baz')  *"]
+
+    >>> asciibox_lines(['foo('], '*', 18, {'bar': 'baz'})[2:-2]
+    ["* foo(bar='baz') *"]
+
+    """
+    asti = ch * width
+    wid_ = width - 2
+    empt = (' ' * wid_).join((ch, ch))
+    liz = [asti, empt]
+    if isinstance(label, basestring):
+        assert not kwargs
+        ham_ = label.strip().center(wid_).join((ch, ch))
+        liz.append(ham_)
+    else:
+        autopar = label[0].endswith('(')
+        if autopar:
+            raw = list(gen_suffix(gen_prefix(label[0],
+                                             *tuple(label[1:]),
+                                             **kwargs)))
+        else:
+            assert not kwargs
+            raw = map(str, label)
+        maxl = max(map(len, raw))
+        filled = ['%-*s' % (maxl, s)
+                  for s in raw]
+        liz.extend([s.center(wid_).join((ch, ch))
+                    for s in filled])
+    liz.extend([empt, asti])
+    return liz
+# ----------------------------------- ] ... asciibox_lines ]
+
+
+def join_lines(liz):
+    return '\n'.join(liz)
+
+
+def raw_result(res):
+    return res
+
+
+def asciibox(label, ch='*', width=79, kwargs={}, finish=join_lines):
+    """
+    Gib eine umrandete Box zurück
+
+    label -- ein String oder eine Sequenz.
+             Wenn das erste Element einer (Nicht-String-) Sequenz mit einer
+             öffnenden Klammer endet, wird angenommen, daß es sich um
+             einen Funktionsaufruf mit Argumenten handelt
+
+    >x> asciibox(['foo(', 'ein string', 123], width=25)
+ '''*************************
+    *                       *
+    *   foo('ein string',   *
+    *       123)            *
+    *                       *
+    *************************'''
+
+    (siehe Doctests zu asciibox_lines)
+    """
+    return finish(asciibox_lines(label, ch, width, kwargs))
+# ---------------------------- ] ... asciibox + Hilfsfunktionen ]
+
+
+def print_indented(txt, indent=0):
+    r"""
+    Zur eingerückten Ausgabe (vom pprint-Modul nicht unterstützt!)
+
+    >>> print_indented('''\
+    ... a
+    ...   b
+    ... ''', 2)
+      a
+        b
+
+    """
+    if isinstance(txt, unicode):
+        prefix = u' ' * indent
+    else:
+        prefix = ' ' * indent
+    try:
+        for line in txt.splitlines():
+            try:
+                print prefix + line.rstrip()
+            except UnicodeEncodeError as e:
+                print '*** Hoppla! %s (%r)' % (e, line.rstrip())
+    except UnicodeEncodeError as e:
+        print '!!! %s' % (e, )
+
+
+def make_sleeper(logger, default=2, method='info'):
+    """
+    Erzeuge eine Funktion, die eine bestimmte Zeit schläft (z.B., um die
+    Ausgaben des psql-Loggings besser zeitlich zuordnen zu können),
+    und darüber natürlich Auskunft gibt.
+
+    Um nach Verwendung das Aufräumen zu unterstützen, muß ein Logger
+    übergeben werden, aus dessen Ausgabe üblicherweise das aufrufende
+    Modul hervorgeht.
+    """
+    logfunc = getattr(logger, method)
+
+    def sleepfunc(secs=default):
+        logfunc('Sleeping %f seconds ...', secs)
+        sleep(secs)
+        logfunc('... done sleeping %f seconds.', secs)
+    return sleepfunc
 # ----------------------------------- ] ... aus unitracc.tools.debug ]
 
 

@@ -19,11 +19,11 @@ __all__ = [# dict-Klassen: Standardwert ...
            'Once',
            # (nun eine Factory:)
            'Proxy',       # ... Ergebnis von Funktion(key)
-           # (Kandidaten für Konversion zu Factory-Aufrufen:) 
+           # (Kandidaten für Konversion zu Factory-Aufrufen:)
            'SetterDict',  # ... setKey
            'CheckedSetterDict',
            'GetterDict',  # ... getKey
-           #  dto., ... mit Factory für Hilfsfunktion: 
+           #  dto., ... mit Factory für Hilfsfunktion:
            'PrefixingMap', 'make_width_getter',
            # list-Klassen:
            'UniqueStack',
@@ -104,7 +104,7 @@ class CheckedSetterDict(SetterDict):
             if key == 'id':
                 raise ValueError('%(key)r must not be set directly!' % locals())
             elif key == 'title':
-                # kein Setter, sondern direkte Zuweisung mit setattr: 
+                # kein Setter, sondern direkte Zuweisung mit setattr:
                 val = None
             elif not key:
                 raise ValueError('Invalid key %(key)r!' % locals())
@@ -332,7 +332,7 @@ class DictOfSets(dict):
             return dict.__getitem__(self, key)
         except KeyError:
             return self._add_set(key)
-        
+
     def add(self, item, key):
         self[key].add(item)
 
@@ -446,7 +446,7 @@ class RootsDict(DictOfSets):
             self._num2key = num2key
             self._dirty = False
         return self._united, self._key2num, self._num2key
-        
+
     def first_hit(self, item, last_key=None, **kwargs):
         item = '/'.join(self._check_item(item))
         united, key2num, num2key = self._cached_data()
@@ -462,7 +462,7 @@ class RootsDict(DictOfSets):
                 storeditem, num = tup[:2]
                 if match(storeditem) and num >= quorum:
                     return num2key[num]
-        # kein Treffer; Vorgabe verwenden? 
+        # kein Treffer; Vorgabe verwenden?
         if 'default' in kwargs:
             default = kwargs.pop('default')
             use_default = kwargs.pop('use_default', True)
@@ -759,7 +759,7 @@ class RecursiveMap(dict):
         ['drei']
         """
         skip = set()
-        # sic - wir testen die Werte als Schlüssel ... 
+        # sic - wir testen die Werte als Schlüssel ...
         for key in dict.values(self):
             if key in skip:
                 continue
@@ -882,7 +882,7 @@ class _Counter(dict):
 
 try:
     from collections import Counter
-    # ... oder defaultdict(int) 
+    # ... oder defaultdict(int)
 except ImportError:
     Counter = _Counter
 

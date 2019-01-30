@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-1.2.3 (unreleased)
+1.2.3 (2019-01-30)
 ------------------
 
 - new function ``update_dict`` in ``dicts`` module

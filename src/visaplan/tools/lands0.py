@@ -268,7 +268,7 @@ def makeSet(s, **kwargs):
     return set()
 
 
-def groupstring(s, size=2):
+def groupstring(s, size=2, cumulate=False):
     """
     Wie TomCom-Adapter groupstring: Teile einen String in gleiche Häppchen
     einer Maximalgröße <size> auf
@@ -277,10 +277,22 @@ def groupstring(s, size=2):
     ['ab', 'cd', 'ef']
     >>> groupstring('abc')
     ['ab', 'c']
+
+    Mit cumulate=True werden die Häppchen „aufsummiert“:
+
+    >>> groupstring('abcdef', cumulate=True)
+    ['ab', 'abcd', 'abcdef']
+    >>> groupstring('abc', cumulate=True)
+    ['ab', 'abc']
     """
-    return [s[i:i + size]
-            for i in xrange(0, len(s), size)
-            ]
+    if cumulate:
+        return [s[0:i + size]
+                for i in xrange(0, len(s), size)
+                ]
+    else:
+        return [s[i:i + size]
+                for i in xrange(0, len(s), size)
+                ]
 # -------------------------- ] ... aus unitracc.tools.misc ]
 
 

@@ -284,6 +284,30 @@ def updated(dic, **kwargs):
     return res
 
 
+def update_dict(form, changes, deletions):
+    """
+    Ändere das übergebene dict in-place und nimm Löschungen vor; da das Objekt
+    selbst geändert wird (vergleichbar der Methode dict.update), wird stets
+    None zurückgegeben.
+
+    >>> dic1 = {'eins': 1, 'zwei': 2, 'drei': 3}
+    >>> update_dict(dic1, {'zwei': 22, 'vier': 4, ['drei']}
+    >>> dic1
+    {'eins': 1, 'zwei': 22, 'vier': 4}
+
+    Es wird erst gelöscht und dann "upgedatet"; ein Schlüssel aus <deletions>
+    kann somim im Resultat durchaus vorhanden sein, wenn er in den
+    anzuwendenden <changes> enthalten ist!
+    """
+    for key in deletions:
+        if key in form:
+            del form[key]
+    if changes:
+        form.update(changes)
+    return
+
+
+
 # --------------------------- [ aus Products.unitracc.tools.misc ... [
 def getOption(odict, key, default=None, factory=NoneOrString,
               choices=None,

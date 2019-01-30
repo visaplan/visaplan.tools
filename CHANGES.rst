@@ -2,6 +2,22 @@ Changelog
 =========
 
 
+1.2.3 (unreleased)
+------------------
+
+- new function ``update_dict`` in ``dicts`` module
+  (which takes a ``deletions`` list argument)
+
+- ``buildout.extract_package_and_version`` supports egg specs with
+  subpaths as well (child of an ``/eggs/`` directory)
+
+- ``buildout.checkPathForPackage`` logs the invalid package entries
+  if the package in question could not be found
+
+- ``lands0.groupstring`` supports ``cumulate`` option (default: False)
+  [tobiasherp]
+
+
 1.2.2 (2018-11-08)
 ------------------
 

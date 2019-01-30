@@ -26,7 +26,6 @@ __all__ = [
     'PackageNotFound',
     'InvalidPathEntry',
     'PackageExtractionError',
-    ''
     ]
 
 
@@ -156,10 +155,20 @@ def extract_package_and_version(spec, invalid=VALUES_INVALID[0], logger=None):
     path below the package directory  but to consider real-life buildout-made
     sys.path entries only; thus, only the first one or (if '.../src') two path
     chunks are considered!
+
+    It turned out to be necessary to support egg specs with subpaths.
+    In such cases, if the first try fails, we try the direct child of 'eggs'
+    as well:
+    >>> epav('/opt/zope/common/eggs/Products.ATContentTypes-2.1.14'
+    ...      '-py2.7.egg/Products/ATContentTypes/thirdparty')
+    ('Products.ATContentTypes', '2.1.14')
     """
     chunks = normpath(spec).split(sep)
     check_illegal_choice(invalid, 'invalid', VALUES_INVALID)
     msg = 'path entry %(spec)r is too short'
+    msg = 'Unexpected path entry %(spec)r'
+    dbg = 'thirdparty' in spec or True and False
+
     for child, chunk, parent in sequence_slide(reversed(chunks)):
         # in src directories we expect development packages
         if parent == 'src':
@@ -167,22 +176,39 @@ def extract_package_and_version(spec, invalid=VALUES_INVALID[0], logger=None):
         if child is None:
             if chunk == 'src':
                 continue
-            if parent == 'src':
+            if parent == 'src':  # development package
                 return (chunk, None)
+            try:
+                package, version = name_and_version_from_eggname(chunk)
+            except ValueError:
+                if parent != 'eggs':
+                    if logger is None:
+                        logger = getLogger('extract_package_and_version')
+                    logger.warn('Invalid top chunk: %(chunk)r (%(spec)r', locals())
+                    # next try with parent == 'eggs' 
+                    continue
+                if invalid == FAIL:
+                    raise PackageExtractionError(**locals())
+                msg = 'Unexpected egg name %(chunk)r'
+                break
+            else:
+                return (package, version)
+        elif child == 'src' and parent == 'src':
+            return (chunk, None)
+        elif parent == 'eggs':
             try:
                 package, version = name_and_version_from_eggname(chunk)
             except ValueError:
                 if invalid == FAIL:
                     raise PackageExtractionError(**locals())
-                msg = 'Unexpected egg name %(chunk)r'
-                break
-                return (None, False)
+                if logger is None:
+                    logger = getLogger('extract_package_and_version')
+                logger.warn('Invalid chunk: %(chunk)r (%(spec)r', locals())
             else:
                 return (package, version)
-        elif child == 'src' and parent == 'src':
-            return (chunk, None)
-        msg = 'Unexpected path entry %(spec)r'
-        break
+        elif not parent:
+            msg = 'Unexpected path entry %(spec)r'
+            break
     if invalid == FAIL:
         raise InvalidPathEntry(spec=spec)
     if logger is None:
@@ -251,13 +277,14 @@ def checkPathForPackage(package, whitelist, path=None,
 
     >>> from visaplan.tools.mock import MockLogger
     >>> logger = MockLogger()
-    >>> def cpfp(package, **kwargs):
+    >>> samplepath=['/.../eggs/visaplan.tools-1.2.2-py2.7.egg',
+    ...             '/.../src/development.pkg/src',
+    ...             '/.../eggs/mismatching.pkg-1.1-py2.7.egg',
+    ...             ]
+    >>> def cpfp(package, path=samplepath, **kwargs):
     ...     return checkPathForPackage(package,
     ...         '1.0, 1.2, 1.2.2',
-    ...         ['/.../eggs/visaplan.tools-1.2.2-py2.7.egg',
-    ...          '/.../src/development.pkg/src',
-    ...          '/.../eggs/mismatching.pkg-1.1-py2.7.egg',
-    ...          ],
+    ...          path=path,
     ...          logger=logger,
     ...          **kwargs)
 
@@ -274,8 +301,29 @@ def checkPathForPackage(package, whitelist, path=None,
     >>> cpfp('mismatching.pkg', mismatching=RETURN)
     False
 
-    >>> cpfp('missing.package', missing=RETURN)
+    >>> logger_offset=len(logger)
+    >>> samplepath.append('/opt/zope/common/eggs/Products.ATContentTypes-2.1.14'
+    ...                   '-py2.7.egg/Products/ATContentTypes/thirdparty')
+    >>> cpfp('Products.ATContentTypes', path=samplepath, mismatching=RETURN)
     False
+    >>> logger[logger_offset:]
+    [('WARN', "Invalid top chunk: 'thirdparty' ('/opt/zope/common/eggs/Products.ATContentTypes-2.1.14-py2.7.egg/Products/ATContentTypes/thirdparty'")]
+
+    If a package cannot be found, all bogus path entries will be logged:
+    >>> samplepath.append('/complete/nonsense')
+    >>> cpfp('missing.package', path=samplepath, missing=RETURN)
+    False
+    >>> logger[-1:]
+    [('WARN', 'Invalid entry: /complete/nonsense')]
+
+    There is no such message for Products.ATContentTypes because in the end the
+    package and version had been found:
+    >>> not [(lvl, txt)
+    ...      for (lvl, txt) in logger
+    ...      if txt.startswith('Invalid entry')
+    ...      and 'ATContentTypes' in txt
+    ...      ]
+    True
     """
     if path is None:
         path = sys.path
@@ -286,23 +334,33 @@ def checkPathForPackage(package, whitelist, path=None,
     check_illegal_choice(missing,     'missing',     VALUES_MISSING)
     check_illegal_choice(noversion,   'noversion',   VALUES_NOVERSION)
     check_illegal_choice(mismatching, 'mismatching', VALUES_MISMATCHING)
+    bogus_paths = []
     for pa in path:
-        p, version = extract(pa, invalid=invalid, logger=logger)
-        if p == package:
-            if version in whitelist:
-                return True
-            if version is None:
-                if noversion == WARN:
-                    if logger is None:
-                        logger = getLogger('checkPathForPackage')
-                    logger.warn('Using development package for %(package)s',
-                                locals())
-                return 'devel'
-            elif mismatching == FAIL:
-                raise UnsupportedVersion(**locals())
-            else:
-                return False
+        try:
+            p, version = extract(pa, invalid=invalid, logger=logger)
+            if p == package:
+                if version in whitelist:
+                    return True
+                if version is None:
+                    if noversion == WARN:
+                        if logger is None:
+                            logger = getLogger('checkPathForPackage')
+                        logger.warn('Using development package for %(package)s',
+                                    locals())
+                    return 'devel'
+                elif mismatching == FAIL:
+                    raise UnsupportedVersion(**locals())
+                else:
+                    return False
+        except InvalidPathEntry as e:
+            bogus_paths.append(pa)
     del p, v
+    if bogus_paths:
+        if logger is None:
+            logger = getLogger('checkPathForPackage')
+        logger.warn('Found %d invalid path entries:', len(bogus_paths))
+        for pa in bogus_paths:
+            logger.warn('Invalid entry: %(pa)s', locals())
     if missing == FAIL:
         raise PackageNotFound(**locals())
     return False

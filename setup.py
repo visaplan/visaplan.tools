@@ -15,7 +15,7 @@ long_description = '\n\n'.join([
 setup(
     name='visaplan.tools',
     version=open('VERSION').read().strip()
-            # +'.dev5'  # in branches only
+            +'.dev1'  # in branches only
             ,
     description="General Python tools",
     long_description=long_description,

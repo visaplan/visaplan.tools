@@ -1,12 +1,22 @@
 Changelog
 =========
 
+1.2.1 (unreleased)
+------------------
+
+- module 'sequences':
+
+  - new function 'nocomment_split'
+    [tobiasherp]
+
 
 1.2 (2018-07-11)
 ----------------
 
 - breaking changes:
+
   - 'classes': Proxy is now a factory rather than a class
+
 - modules 'debug', 'dicts', 'lands0', 'minifuncs'
   [tobiasherp]
 

@@ -166,6 +166,37 @@ def unique_union(*seqs):
     return res
 
 
+def nocomments_split(s):
+    r"""
+    Split a multiline string, skipping comments.
+
+    >>> f = nocomments_split
+    >>> f('''one.two three
+    ... # ignored comment line
+    ... four # ignored trailing comment
+    ...    # another comment line
+    ... five
+    ... ''')
+    ['one.two', 'three', 'four', 'five']
+    >>> f('  \t')
+    []
+    >>> f('  # ignored')
+    []
+    >>> f('one\r\n  # ignored \rtwo \n  # another comment\n three')
+    ['one', 'two', 'three']
+
+    >>> '   '.split()
+    []
+    """
+    res = []
+    for line in s.splitlines():
+        if '#' in line:
+            line, comment = line.split('#', 1)
+        for word in line.split():
+            res.append(word)
+    return res
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()

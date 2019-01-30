@@ -16,6 +16,7 @@ __all__ = [
            'pp',
            'log_or_trace',  # Universalwerkzeug; siehe auch trace_this
            # ----------------------- ] ... aus unitracc.tools.debug2 ]
+           'pretty_callstack',
            # ------------------------ [ aus unitracc.tools.debug ... [
            'trace_this',    # ... für einfache Fälle
            'arginfo',
@@ -41,7 +42,10 @@ try:
     from visaplan.plone.tools.log import getLogSupport
 except ImportError:
     getLogSupport = None
-from visaplan.tools.minifuncs import gimme_False
+try:
+    from visaplan.tools.minifuncs import gimme_False
+except ImportError:
+    gimme_False = lambda: False
 
 # ------------------------------------------------------ [ Daten ... [
 _TRACE_SWITCH = defaultdict(gimme_False)
@@ -219,6 +223,32 @@ def pp(*args, **kwargs):
            ) + args + tuple(kwargs.items())
     pprint(tup)
 # ---------------------------------- ] ... aus unitracc.tools.debug2 ]
+
+
+def pretty_callstack(limit=3, revert=True, verbose=True):
+    """
+    Ermittle die letzten <limit> aufrufenden Funktionen
+    """
+    raw_info = extract_stack(limit=limit+1)
+    res = []
+    for tup in raw_info[:-1]:
+        filename, lineno, funcname = tup[:3] 
+        if filename.endswith('.pyc'):
+            filename = filename[:-1]
+        res.append((funcname
+            and '%(filename)s[%(funcname)s]: %(lineno)d'
+            or  '%(filename)s: %(lineno)d'
+            ) % locals())
+    if verbose:
+        hint = ('The last %d calling functions, innermost %s:'
+                ) % (len(res),
+                     revert and 'FIRST' or 'last',
+                     )
+    if revert:
+        res.reverse()
+    if verbose:
+        res.insert(0, hint)
+    return res
 
 
 # ----------------------------------- [ aus unitracc.tools.debug ... [
@@ -513,3 +543,21 @@ def make_sleeper(logger, default=2, method='info'):
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
+
+    def a():
+        print 'Funktion a ...'
+        print '\n'.join(pretty_callstack())
+        print '... Funktion a'
+
+    def b():
+        print 'Funktion b ...'
+        a()
+        print '... Funktion b'
+
+    def c():
+        print 'Funktion c ...'
+        b()
+        print '\n'.join(pretty_callstack())
+        print '... Funktion c'
+    
+    c()

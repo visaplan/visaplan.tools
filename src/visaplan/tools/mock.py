@@ -86,6 +86,9 @@ class MockLogger(list):
     def info(self, txt, *args):
         self.append(('INFO', self._cook(txt, *args)))
 
+    def warn(self, txt, *args):
+        self.append(('WARN', self._cook(txt, *args)))
+
 
 class MockContext:
     # siehe auch MockProfile

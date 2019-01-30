@@ -11,6 +11,11 @@ This is a collection of utility modules for Python projects.
 Features
 --------
 
+- ``buildout`` module, for ``buildout``-built projects:
+
+  Function ``checkPathForPackage`` to check a given package against a versions whitelist.
+  Useful if you like to constain the versions of that package without actually requiring it.
+
 - ``coding`` module:
 
   Factory functions to create ``safe_encode`` resp. ``safe_decode`` functions as needed
@@ -64,7 +69,7 @@ Documentation
 -------------
 
 The modules are documented by doctests.
-Full documentation for end users can be found in the "docs" folder.
+Apart from this, we don't have real user documentation yet (sorry).
 
 
 Installation

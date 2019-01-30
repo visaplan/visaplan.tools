@@ -1,6 +1,16 @@
 Changelog
 =========
 
+
+1.2.2 (2018-11-08)
+------------------
+
+- new module ``buildout`` for use in buildout-built projects:
+  use the ``checkPathForPackage`` function to check an installed package
+  against a versions whitelist
+  [tobiasherp]
+
+
 1.2.1 (2018-09-17)
 ------------------
 

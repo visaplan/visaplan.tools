@@ -120,3 +120,4 @@ auto.msg
 scripts/
 init
 init.vim
+CHANGES-in-*.rst

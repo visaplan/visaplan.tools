@@ -115,6 +115,10 @@ def github_urls(package, **kwargs):
             user = pkg_list[0]
             if 'user' in kwargs:
                 assert pop('user') == user
+    if pop('travis', False):  # reqires github to be trueish
+        res.update({  # CHECKME: is there a de-facto standard key for this?
+            'Tests': 'https://travis-ci.org/%(user)s/%(package)s' % locals()
+            })
     base = 'https://github.com/%(user)s/%(package)s' % locals()
     res.update({
         'Source': base,

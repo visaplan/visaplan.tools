@@ -2,6 +2,41 @@ Changelog
 =========
 
 
+1.3 (unreleased)
+----------------
+
+- Breaking changes:
+
+  - Signature change (e.g. name of first argument: ``form`` --> ``dic``) for
+    ``dicts.update_dict``.
+
+
+1.2.5 (2019-10-16)
+------------------
+
+- New class ``classes.AliasDict``
+
+- Added some doctests.
+
+[tobiasherp]
+
+
+1.2.4 (2019-05-09)
+------------------
+
+- New function ``dicts.update_dict`` (from v1.2.3) "published" in ``__all__`` list.
+  We are not happy with the signature of this function, though, so it will likely change
+  in a future release.
+
+- New function ``classes.connected_dicts`` which creates two connected
+  dictionaries with ``dic1[key] = val`` <--> ``dict2[val] = key``
+
+- ``log_or_trace`` will print a useful info, containing the ``trace_key``,
+  before calling ``set_trace()``
+
+[tobiasherp]
+
+
 1.2.3 (2019-01-30)
 ------------------
 

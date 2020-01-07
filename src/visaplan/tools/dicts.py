@@ -22,6 +22,7 @@ __all__ = (
            'getOption',  # von einem Dict (z. B. für Transmogrifier)
            # kleine Helferlein:
            'updated',  # ungefähr analog sorted; für dict-Objekte
+           'update_dict',  # changes and deletions
            )
 
 
@@ -296,7 +297,7 @@ def update_dict(form, changes, deletions):
     {'eins': 1, 'zwei': 22, 'vier': 4}
 
     Es wird erst gelöscht und dann "upgedatet"; ein Schlüssel aus <deletions>
-    kann somim im Resultat durchaus vorhanden sein, wenn er in den
+    kann somit im Resultat durchaus vorhanden sein, wenn er in den
     anzuwendenden <changes> enthalten ist!
     """
     for key in deletions:
@@ -305,7 +306,6 @@ def update_dict(form, changes, deletions):
     if changes:
         form.update(changes)
     return
-
 
 
 # --------------------------- [ aus Products.unitracc.tools.misc ... [

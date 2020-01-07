@@ -47,6 +47,13 @@ class HtmlEntityProxy(dict):
     Wird im Buchungsmodul verwendet (../browser/booking/utils.py):
     >>> entity['euro']
     u'\u20ac'
+
+    Um z. B. Breadcrumbs zu erzeugen:
+    >>> divider = u' %(rarr)s ' % entity
+    >>> divider
+    u' \u2192 '
+    >>> divider.join((u'eins', u'zwei', u'drei'))
+    u'eins \u2192 zwei \u2192 drei'
     """
     def __getitem__(self, key):
         try:

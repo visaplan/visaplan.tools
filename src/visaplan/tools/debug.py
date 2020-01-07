@@ -125,6 +125,13 @@ class log_or_trace(object):
         elif trace_key and trace is None:
             trace = True
         if trace_key:
+            INFO_MASK = '\n'.join(('',
+                        '*** switched_tracer for %(inner1)r',
+                        '*** trace_key is "%(trace_key)s"',
+                        ">>> pprint(dict(globals()['_TRACE_SWITCH']))",
+                        ">>> globals()['_TRACE_SWITCH'][%(trace_key)r] = False",
+                        ''
+                        ))
             def trace_on(key=trace_key):
                 globals()['_TRACE_SWITCH'][key] = True
 
@@ -138,6 +145,7 @@ class log_or_trace(object):
             @wraps(func)
             def switched_tracer(*args, **kw):
                 if globals()['_TRACE_SWITCH'][trace_key]:
+                    print(INFO_MASK % locals())
                     set_trace()  # trace_on|off()
                 res = inner1(*args, **kw)
                 return res  # ... switched_tracer

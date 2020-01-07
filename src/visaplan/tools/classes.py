@@ -10,13 +10,15 @@ from posixpath import normpath as normpath_posix
 __all__ = [# dict-Klassen: Standardwert ...
            'Mirror',      # ... der Schlüssel (key)
            'Counter',     # ... 0
-           'WriteProtected',
-           'ChangeProtected',
            'RecursiveMap',
            'make_frozen_shadow',  # FrozenShadow-Klasse
            'DictOfSets',  # z. B. für Workflow
            'RootsDict',   # ... speziell für Pfade
            'Once',
+           # ..., Schreiboperationen 
+           'AliasDict',
+           'WriteProtected',
+           'ChangeProtected',
            # (nun eine Factory:)
            'Proxy',       # ... Ergebnis von Funktion(key)
            # (Kandidaten für Konversion zu Factory-Aufrufen:)
@@ -25,6 +27,8 @@ __all__ = [# dict-Klassen: Standardwert ...
            'GetterDict',  # ... getKey
            #  dto., ... mit Factory für Hilfsfunktion:
            'PrefixingMap', 'make_width_getter',
+           # nur als Factory sinnvoll:
+           'connected_dicts',
            # list-Klassen:
            'UniqueStack',
            ]
@@ -59,6 +63,82 @@ class Mirror(dict):
         except KeyError:
             dict.__setitem__(self, key, key)
             return dict.__getitem__(self, key)
+
+
+class AliasDict(dict):
+    """
+    Für Aliase
+
+    >>> mirror = AliasDict({'edit': 'Modify portal content'})
+    >>> mirror['edit'] = 'Modify portal content'
+    >>> mirror['edit']
+    'Modify portal content'
+
+    Da 'Modify portal content' als Wert zum Schlüssel 'edit' verwendet worden ist,
+    ist es auch als Schlüssel zu "sich selbst" gesetzt worden:
+
+    >>> mirror['Modify portal content']
+    'Modify portal content'
+
+    Bei unbekannten Schlüsseln tritt (im Gegensatz zu Mirror) ein Fehler auf:
+
+    >>> mirror['manage']
+    Traceback (most recent call last):
+    ...
+    KeyError: 'manage'
+
+    Wenn der übergebene Wert als Schlüssel schon existiert,
+    wird dieser nicht überschrieben:
+
+    >>> mirror['manage'] = 'edit'
+    >>> mirror['manage']
+    'edit'
+    >>> mirror['edit']
+    'Modify portal content'
+    """
+    def __setitem__(self, key, val):
+        dict.__setitem__(self, key, val)
+        if val not in self:
+            dict.__setitem__(self, val, val)
+
+
+def connected_dicts(cls=None, **kwargs):
+    """
+    Gib zwei verbundene Dictionarys zurück;
+    die Klasse kann als erstes Argument `cls` angegeben werden.
+
+    >>> suffix2role, role2suffix = connected_dicts(**{
+    ... 'Author': 'Editor',
+    ... 'Reader': 'Reader',
+    ... })
+    >>> suffix2role['Author']
+    'Editor'
+    >>> role2suffix['Editor']
+    'Author'
+    >>> suffix2role['Reader']
+    'Reader'
+    """
+    if cls is None:
+        cls = dict
+    class ConnectedDict(cls):
+        _partner = None
+
+        def __setitem__(self, key, value, do_mirror=True):
+            if do_mirror and self._partner is None:
+                raise TypeError("Can't set key %(key)r to %(value)r "
+                        'because the partner dict is not (yet) known!'
+                        % locals())
+            cls.__setitem__(self, key, value)
+            if do_mirror:
+                cls.__setitem__(self._partner, value, key)
+
+    m1 = ConnectedDict()
+    m2 = ConnectedDict()
+    m1._partner = m2
+    m2._partner = m1
+    for key, val in dict(**kwargs).items():
+        m1[key] = val
+    return m1, m2
 
 
 class SetterDict(dict):

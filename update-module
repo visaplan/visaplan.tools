@@ -7,7 +7,7 @@ MYDIR="$(dirname "$me")"
 MYPRODUCT='visaplan.tools'
 # siehe auch --> USUAL_SUBPATH
 DEFAULT_SRC_PRODUCT='Products.unitracc'
-DEFAULT_SRC_BRANCH='v3_0'
+DEFAULT_SRC_BRANCH='v3_1'
 # viele Tools-Module sind in unitracc-split nicht mehr vorhanden:
 DEFAULT_MONOLITH_BRANCH='unitracc-staging2'
 SVN_BASE='svn+ssh://svn.visaplan.com/unitracc'
@@ -193,6 +193,9 @@ function merge_part() {
 		$DEST_PATH/*)
 			filewarning "$dest" || return 1
 			add_copied "$dest"
+			;;
+		.)
+			add_copied .
 			;;
 		*)
 			err "Unbekanntes Ziel: '$dest'"
@@ -389,6 +392,9 @@ else
 				Products.unitracc)
 					check_branch 'v3_1'
 					;;
+				dayta)
+					check_branch 'v1_2'
+					;;
 				visaplan.UnitraccCustom)
 					# skins/unitracc_templates	
 					check_branch 'v1_2'
@@ -398,6 +404,21 @@ else
 					;;
 				visaplan.UnitraccSkins)
 					check_branch 'v1_0'
+					;;
+				visaplan.plone.animations)
+					check_branch 'github'
+					;;
+				visaplan.plone.groups)
+					check_branch 'v1_0'
+					;;
+				visaplan.plone.staticthumbnails)
+					check_branch 'v1_0'
+					;;
+				visaplan.plone.structures)
+					check_branch 'v1_0'
+					;;
+				SKELETON)
+					check_branch 'visaplan.plone'
 					;;
 				*)
 					info "Keine --branch-Vorgabe für '$FROMPRODUCT'"
@@ -418,7 +439,19 @@ else
 		Products.unitracc)
 			USUAL_SUBPATH="src/$(echo "$FROMPRODUCT" | sed 's,\.,/,g')/tools"
 			;;
+		SKELETON)
+			USUAL_SUBPATH=''
+			;;
+		'')
+			err "Kein Produkt angegeben (-p|--product)!"
+			;;
 		*)
+			USUAL_SUBPATH="src/$(echo "$FROMPRODUCT" | sed 's,\.,/,g')"
+			info "USUAL_SUBPATH, generisch: $USUAL_SUBPATH"
+			;;
+		*)
+			info "Subversion-Kommando zum manuellen Aufruf:"
+			echo "svn merge $SOURCE_ROOT .$SVNARGS" >&2
 			err "Produkt '$FROMPRODUCT': wo gibt es hier etwas für '$MYPRODUCT'?!"
 	esac
 	esac  # case "$PART" -- nur Änderungen aus scripts/?

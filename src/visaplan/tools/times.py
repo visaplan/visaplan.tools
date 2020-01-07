@@ -13,6 +13,8 @@ __version__ = '.'.join(map(str, VERSION))
 
 # Standardmodule
 from time import localtime, strftime, mktime, strptime
+from time import gmtime
+from calendar import timegm
 
 __all__ = [
            'makeDeltaTime',
@@ -56,29 +58,79 @@ def makeDeltaTime(val):
 def make_defaulttime_calculator(year=0, month=0, day=0,
                                 nextmonth=False,
                                 dateonly=True,
-                                default_date_format='%Y-%m-%d'):
+                                default_date_format='%Y-%m-%d',
+                                **kwargs):
     """
     Gib eine Funktion zurück, die ein Standarddatum erzeugt, z. B. das
     Standard-Ablaufdatum einer TAN (--> @@tan.utils.default_expiration_date).
 
-    >>> heute=strptime('2.5.2014', '%d.%m.%Y')
-    >>> f = make_defaulttime_calculator(year=1, nextmonth=True)
+    By default the time.localtime function is used; you can force e.g.
+    time.gmtime to be used by the keyword-only option "utc".
+    We need this for testability:
+
+    >>> from time import gmtime
+    >>> kw = dict(utc=True)
+
+    Preparation of test data:
+
+    >>> heute=gmtime(1406808000.0)
+    >>> heute
+    time.struct_time(tm_year=2014, tm_mon=7, tm_mday=31, tm_hour=12, tm_min=0, tm_sec=0, tm_wday=3, tm_yday=212, tm_isdst=0)
+    >>> timegm(heute)
+    1406808000
+
+    Create a function f which adds at least one year and increases single
+    days until the 1st day of a month is reached:
+
+    >>> f = make_defaulttime_calculator(year=1, nextmonth=True, **kw)
+
+    By default, the result is formatted according to the default_date_format:
+
     >>> f(today=heute)
-    '2015-06-01'
-    >>> f(today=heute, mask=None)
-    1433109600.0
-    >>> f2 = make_defaulttime_calculator(day=90, nextmonth=False)
+    '2015-08-01'
+
+    By specifying mask=None, you can get a number:
+
+    >>> num = f(today=heute, mask=None)
+    >>> num
+    1438387200
+
+    By default, the time part is set to 0:00:
+
+    >>> gmtime(num)
+    time.struct_time(tm_year=2015, tm_mon=8, tm_mday=1, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=213, tm_isdst=0)
+
+    However, you can suppress this behaviour:
+
+    >>> gmtime(f(today=heute, mask=None, dateonly=False))
+    time.struct_time(tm_year=2015, tm_mon=8, tm_mday=1, tm_hour=12, tm_min=0, tm_sec=0, tm_wday=5, tm_yday=213, tm_isdst=0)
+
+    Create a function f2 which adds 90 days:
+
+    >>> f2 = make_defaulttime_calculator(day=90, nextmonth=False, **kw)
     >>> f2(today=heute)
-    '2014-07-31'
+    '2014-10-29'
     >>> f2(today=heute, mask=None)
-    1406757600.0
+    1414540800
     """
+    pop = kwargs.pop
+    utc = pop('utc', False)
+    if kwargs:
+        raise TypeError('Undefined keyword argument(s)! %s'
+                        % (kwargs.keys(),
+                           ))
+    if utc:
+        time_factory = gmtime
+        time_to_secs = timegm
+    else:
+        time_factory = localtime
+        time_to_secs = mktime
 
     def calc_date(mask='', today=None, dateonly=dateonly):
         if today is None:
-            today = localtime()
+            today = time_factory()
         elif isinstance(today, float):
-            today = localtime(today)
+            today = time_factory(today)
         timelist = list(today)
         if year or month or day or dateonly:
             if year:
@@ -90,15 +142,15 @@ def make_defaulttime_calculator(year=0, month=0, day=0,
             if dateonly:
                 timelist[3:6] = [0, 0, 0]
         if nextmonth:
-            timelist = list(localtime(mktime(timelist)))
+            timelist = list(time_factory(timegm(timelist)))
             if timelist[2] != 1:
                 timelist[1] += 1
                 timelist[2] = 1
-        val = mktime(timelist)
+        val = time_to_secs(timelist)
         if mask is None:
             return val
         else:
-            return strftime(mask or default_date_format, localtime(val))
+            return strftime(mask or default_date_format, time_factory(val))
 
     return calc_date
 

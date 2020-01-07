@@ -58,32 +58,6 @@ function check_monolith() {
 	fi 
 }
 
-function check_trunk() {
-	local newspec="trunk"
-	if [ -z "$BRANCHSPEC" ]; then
-		BRANCHSPEC="$newspec"
-		return 0
-	elif [ "$newspec" == "$BRANCHSPEC" ]; then
-		return 0
-	else
-		err "Doppelte Angabe der Quelle (--trunk)"
-		return 1
-	fi
-}
-
-function check_branch() {
-	local newspec="branches/$1"
-	if [ -z "$BRANCHSPEC" ]; then
-		BRANCHSPEC="$newspec"
-		return 0
-	elif [ "$newspec" == "$BRANCHSPEC" ]; then
-		return 0
-	else
-		err "Doppelte Angabe des Quellzweigs (--branch=$1)"
-		return 1
-	fi
-}
-
 function add_part() {
 	local dest="$1"
 	if [ -z "$dest" ]; then
@@ -281,6 +255,13 @@ for arg in "$@"; do
 				val=$(echo "$arg"|sed 's/--branch=//')
 				check_branch "$val"
 				;;
+			--tag)
+				PENDING="$arg"
+				;;
+			--tag=*)
+				val=$(echo "$arg"|sed 's/--tag=//')
+				check_tag "$val"
+				;;
 			-b*)
 				val=$(echo "$arg"|sed 's/-b//')
 				check_branch "$val"
@@ -318,6 +299,9 @@ for arg in "$@"; do
 		esac
 	else
 		case "$PENDING" in
+			--tag)
+				check_tag "$arg"
+				;;
 			-b|--branch)
 				check_branch "$arg"
 				;;
@@ -405,8 +389,14 @@ else
 				visaplan.UnitraccSkins)
 					check_branch 'v1_0'
 					;;
+				visaplan.plone.ajaxnavigation)
+					check_branch 'v1_0-devel'
+					;;
 				visaplan.plone.animations)
 					check_branch 'github'
+					;;
+				visaplan.plone.base)
+					check_branch 'v1_1'
 					;;
 				visaplan.plone.groups)
 					check_branch 'v1_0'
@@ -434,7 +424,7 @@ else
 		*)
 	case "$FROMPRODUCT" in
 		"$MYPRODUCT")
-			USUAL_SUBPATH="src/$(echo "$FROMPRODUCT" | sed 's,\.,/,g')"
+			USUAL_SUBPATH=''
 			;;
 		Products.unitracc)
 			USUAL_SUBPATH="src/$(echo "$FROMPRODUCT" | sed 's,\.,/,g')/tools"

@@ -4,3 +4,5 @@ include *.rst
 include VERSION*
 global-exclude *.pyc *~ .*.swp .*.swo
 global-exclude *-local.rst
+global-exclude *.vim *.sed *.sh
+exclude CHANGES-in-*.rst

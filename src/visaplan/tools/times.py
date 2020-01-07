@@ -68,7 +68,6 @@ def make_defaulttime_calculator(year=0, month=0, day=0,
     time.gmtime to be used by the keyword-only option "utc".
     We need this for testability:
 
-    >>> from time import gmtime
     >>> kw = dict(utc=True)
 
     Preparation of test data:

@@ -224,7 +224,7 @@ def make_key_injector(srckey, func, destkey, errmask):
     >>> func = lambda x: {'group_title': '%s-Gruppe' % x.split('_', 1)[-1].upper()}
     >>> destkey = 'group_title'
     >>> errmask = 'Unknown group "%(group_id)s"'
-    >>> extend = key_injector(srckey, func, destkey, errmask)
+    >>> extend = make_key_injector(srckey, func, destkey, errmask)
     >>> extend(dic)
     >>> dic
     {'group_id': 'group_abc', 'group_title': 'ABC-Gruppe'}
@@ -292,9 +292,9 @@ def update_dict(form, changes, deletions):
     None zurückgegeben.
 
     >>> dic1 = {'eins': 1, 'zwei': 2, 'drei': 3}
-    >>> update_dict(dic1, {'zwei': 22, 'vier': 4, ['drei']}
-    >>> dic1
-    {'eins': 1, 'zwei': 22, 'vier': 4}
+    >>> update_dict(dic1, {'zwei': 22, 'vier': 4}, ['drei'])
+    >>> sorted(dic1.items())
+    [('eins', 1), ('vier', 4), ('zwei', 22)]
 
     Es wird erst gelöscht und dann "upgedatet"; ein Schlüssel aus <deletions>
     kann somit im Resultat durchaus vorhanden sein, wenn er in den

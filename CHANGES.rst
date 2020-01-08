@@ -11,6 +11,31 @@ Changelog
     ``dicts.update_dict``.
 
 
+1.2.6 (unreleased)
+------------------
+
+Improvements:
+
+- Travis CI integration added.
+- Test discovery configuration for nose2 (used on Travis) and nose.
+
+Bugfixes:
+
+- Fixed doctests for
+
+  - ``.dicts.update_dict``
+  - ``.dicts.make_key_injector``
+
+- Removed now-obsolete ...tests/test_doctests.py file which caused ``nosetests`` to fail.
+
+New Features:
+
+- ``.times.make_defaulttime_calculator``: new keyword-only option ``utc=False``,
+  to make the doctests work with Travis.
+
+[tobiasherp]
+
+
 1.2.5 (2019-10-16)
 ------------------
 

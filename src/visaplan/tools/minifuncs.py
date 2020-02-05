@@ -47,7 +47,7 @@ def gimmeConst__factory(val):
 
 def makeBool(val, default=None):
     """
-    gib einen Wahrheitswert zurueck
+    gib einen Wahrheits- oder Zahlenwert zurueck
 
     val -- ein Variablenwert, meistens der Wert einer Request-Variablen;
            ein String.
@@ -63,6 +63,8 @@ def makeBool(val, default=None):
     False
     >>> makeBool('', 'yes')
     True
+    >>> makeBool(42)
+    42
     >>> makeBool('1')
     1
     >>> makeBool(None)
@@ -73,6 +75,29 @@ def makeBool(val, default=None):
     >>> options = {}
     >>> makeBool(options.get('verbose'), 'false')
     False
+
+    Bei fehlerhaften Werten gibt es einen ValueError:
+
+    >>> makeBool('vielleicht')
+    Traceback (most recent call last):
+    ...
+    ValueError: invalid literal for int() with base 10: 'vielleicht'
+
+    VORSICHT bei der Kombination von Zahlen mit default='yes'!
+    Wenn die Zahl als String übergeben wird, ist alles gut:
+
+    >>> makeBool('0', default='yes')
+    0
+    >>> makeBool('42', default='yes')
+    42
+
+    Wird 0 als ferige Zahl übergeben, gewinnt aber der Vorgabewert:
+
+    >>> makeBool(0, default='yes')
+    True
+
+    Dieses Verhalten ist natürlich als fehlerhaft anzusehen und wird mutmaßlich
+    in einer späteren Version korrigiert werden.
     """
     try:
         if default is None:

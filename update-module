@@ -1,8 +1,8 @@
 #!/bin/bash
 me="$0"
 MYDIR="$(dirname "$me")"
-. "$MYDIR/scripts/shelltools.sh"
-. "$MYDIR/scripts/x-funcs.sh"
+. "$MYDIR/tools/shelltools.sh"
+. "$MYDIR/tools/x-funcs.sh"
 
 MYPRODUCT='visaplan.tools'
 # siehe auch --> USUAL_SUBPATH
@@ -418,8 +418,13 @@ else
 	fi
 	SOURCE_ROOT="^/products/$FROMPRODUCT/$BRANCHSPEC"
 	case "$PARTS" in
+		tools|tools/)
+			info "In SKELETON[visaplan.plone]@30222 wurde scripts/ nach tools/ umbenannt!"
+			USUAL_SUBPATH='tools'
+			;;
 		scripts|scripts/)
-			USUAL_SUBPATH='scripts'
+			info "In SKELETON[visaplan.plone]@30222 wurde scripts/ nach tools/ umbenannt!"
+			USUAL_SUBPATH='tools'
 			;;
 		*)
 	case "$FROMPRODUCT" in
@@ -444,7 +449,7 @@ else
 			echo "svn merge $SOURCE_ROOT .$SVNARGS" >&2
 			err "Produkt '$FROMPRODUCT': wo gibt es hier etwas für '$MYPRODUCT'?!"
 	esac
-	esac  # case "$PART" -- nur Änderungen aus scripts/?
+	esac  # case "$PART" -- nur Änderungen aus tools/?
 fi
 SOURCE_FILTER="$(echo "$SOURCE_ROOT" | sed 's/^\^/\\s*/')"
 if ! [ -d "$DEST_PATH" ]; then

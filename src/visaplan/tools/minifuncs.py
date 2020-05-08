@@ -91,13 +91,14 @@ def makeBool(val, default=None):
     >>> makeBool('42', default='yes')
     42
 
-    Wird 0 als ferige Zahl übergeben, gewinnt aber der Vorgabewert:
+    Nun kommt der Fehler.
+    Wird 0 als fertige Zahl übergeben, gewinnt bisher der Vorgabewert:
 
     >>> makeBool(0, default='yes')
     True
 
-    Dieses Verhalten ist natürlich als fehlerhaft anzusehen und wird mutmaßlich
-    in einer späteren Version korrigiert werden.
+    Hierauf bitte nicht verlassen!
+    Dieses Verhalten wird mutmaßlich in einer späteren Version korrigiert werden.
     """
     try:
         if default is None:

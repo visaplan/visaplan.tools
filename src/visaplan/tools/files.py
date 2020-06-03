@@ -2,6 +2,10 @@
 """\
 Dateisystem-Tools für Unitracc
 """
+from __future__ import absolute_import
+
+from six import string_types as six_string_types
+from six.moves import map
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
@@ -36,7 +40,7 @@ else:
     logger, debug_active, DEBUG = getLogSupport()
 
 # ---------------------------------- [ Daten ... [
-default_fs_mode = 0770
+default_fs_mode = 0o770
 default_makemissingdirs = True
 default_gently = True
 default_deletesiblings = False
@@ -103,7 +107,7 @@ def make_mtime_checker(logger=logger,
         spareextlist = kwargs.pop('spareextlist', default_spareextlist)
         spareext = set()
         if spareextlist:
-            if isinstance(sparextlist, basestring):
+            if isinstance(sparextlist, six_string_types):
                 spareextlist = [spareextlist]
             for ext in spareextlist:
                 if ext:

@@ -7,6 +7,7 @@ For now, we support to check for whitelisted package versions
 but if you have it, you want to be sure to have a supported (whitelisted)
 version.
 """
+from __future__ import absolute_import
 import sys
 from os.path import normpath, sep
 from logging import getLogger

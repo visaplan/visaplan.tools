@@ -35,6 +35,8 @@ Siehe auch .cfg.get_debug_active, .log.getLogSupport
 """
 
 # Standardmodule:
+from __future__ import absolute_import
+from __future__ import print_function
 from time import time
 from functools import wraps
 
@@ -111,7 +113,7 @@ class StopWatch(object):
         """
         Mini-Logger-Methode
         """
-        print txt % args
+        print(txt % args)
 
     def lap(self, txt, delta=None):
         if self._disabled:

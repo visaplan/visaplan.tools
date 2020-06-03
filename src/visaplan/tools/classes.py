@@ -4,7 +4,13 @@ unitracc.tools.classes - kleine nützliche Hilfsklassen
 
 Autor: Tobias Herp
 """
+from __future__ import absolute_import
+
 from posixpath import normpath as normpath_posix
+from collections import Mapping
+from pdb import set_trace
+
+from visaplan.tools.minifuncs import check_kwargs
 
 
 __all__ = [# dict-Klassen: Standardwert ...
@@ -15,12 +21,13 @@ __all__ = [# dict-Klassen: Standardwert ...
            'DictOfSets',  # z. B. für Workflow
            'RootsDict',   # ... speziell für Pfade
            'Once',
-           # ..., Schreiboperationen 
+           # ..., Schreiboperationen
            'AliasDict',
            'WriteProtected',
            'ChangeProtected',
            # (nun eine Factory:)
            'Proxy',       # ... Ergebnis von Funktion(key)
+           'StackOfDicts',
            # (Kandidaten für Konversion zu Factory-Aufrufen:)
            'SetterDict',  # ... setKey
            'CheckedSetterDict',
@@ -262,8 +269,8 @@ def Proxy(func, *args, **kwargs):
     """
     aggressive = kwargs.pop('aggressive', False)
     normalize = kwargs.pop('normalize', None)
-    if kwargs:
-        raise TypeError('Unknown arguments! (%(kwargs)r)' % locals())
+
+    check_kwargs(kwargs)  # raises TypeError if necessary
 
     getitem = dict.__getitem__
     setitem = dict.__setitem__
@@ -852,6 +859,245 @@ class RecursiveMap(dict):
                 if val == key:
                     yield key
                 skip.add(key)
+
+
+class StackOfDicts(Mapping):
+    """
+    A stack of dictionaries which are queried for a given key.
+
+    Consider you have a set of options:
+    >>> sod = StackOfDicts({'a': 1, 'b': 2})
+
+    Now you'd like to override a subset of those options locally:
+    >>> sod.push({'a': 'overridden'})
+
+    You may work with the local options now like so:
+    >>> sorted(sod.items())
+    [('a', 'overridden'), ('b', 2)]
+
+    or of course access the keys individually:
+    >>> sod['a']
+    'overridden'
+
+    When you're done with the local override (e.g. in some `finally` code),
+    you pop the changes from the stack:
+
+    >>> dict(sod.pop())
+    {'a': 'overridden'}
+    >>> sorted(sod.items())
+    [('a', 1), ('b', 2)]
+    >>> sod['a']
+    1
+    >>> 'a' in sod
+    True
+    >>> 'missing' in sod
+    False
+
+    Of course, the StackOfDict object can be converted to an ordinary dict:
+    >>> sorted(dict(sod).items())
+    [('a', 1), ('b', 2)]
+
+    The length of a dictionary is the number of keys:
+    >>> len(sod)
+    2
+
+    So, what if you want to know the number of stacked member directories?
+    We consider a stack to feature a height:
+
+    >>> sod.height()
+    1
+
+    The idea of this stack of dicts is that the contained dictionaries are not
+    to be changed; thus, the default factory for "member dictionaries"
+    is the `WriteProtected` dictionary class.
+    The StackOfDicts object itself disallows direct assignment simply by implementing the
+    collections.Mapping base class, rather than collections.MutableMapping:
+
+    >>> sod['a'] = 'forbidden'
+    Traceback (most recent call last):
+    ...
+    TypeError: 'StackOfDicts' object does not support item assignment
+
+    You might have reason to choose something else; in this case, use the named
+    `factory` option.
+
+    Now for the `checked` property.
+    Since our StackOfDicts object was initialized with non-empty data,
+    it is checked by default:
+    >>> sod.push({'other': 42})
+    Traceback (most recent call last):
+    ...
+    ValueError: The given dictionary contains disallowed keys! (other)
+
+    You might want to be *able* to add new keys in pushed dict objects, however.
+    Therefor you can specify checked=False during initialization:
+    >>> sod = StackOfDicts({'a': 1, 'b': 2}, checked=False)
+    >>> sorted(sod.keys())
+    ['a', 'b']
+    >>> len(sod)
+    2
+    >>> sod.height()
+    1
+    >>> sod.push({'other': 42})
+    >>> sorted(sod.keys())
+    ['a', 'b', 'other']
+    >>> len(sod)
+    3
+    >>> sod.height()
+    2
+    >>> popped = sod.pop()
+    >>> popped  #doctest: +ELLIPSIS
+    <WriteProtected at ...>
+    >>> dict(popped)
+    {'other': 42}
+    >>> sorted(sod.keys())
+    ['a', 'b']
+    >>> len(sod)
+    2
+    >>> sod.height()
+    1
+
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Named options:
+
+        `factory` - the factory function (or class) the unnamed options are fed into;
+                    should produce a valid dictionary or some subclass.
+                    Defaults to the `WriteProtected` class.
+
+        `checked` - if True, the later-pushed dictionaries are checked
+                    to not contain any keys which have not been found during
+                    initialization.
+                    Defaults to True, if non-empty dictionaries have been
+                    provided during initialization, else to False
+
+        `strict` - True by default. Will raise a TypeError if unknown keyword arguments are found.
+
+        The constructor is limited regarding the initialization of the first dictionary;
+        you'll use something like kwargs in most cases anyway.
+        """
+        pop = kwargs.pop
+        self.factory = pop('factory', WriteProtected)
+        factory = self.factory
+        if issubclass(factory, WriteProtected):
+            freeze_method = pop('freeze_method', WriteProtected.freeze)
+        else:
+            freeze_method = pop('freeze_method', None)
+        auto_freeze = pop('auto_freeze', freeze_method is not None)
+        self.auto_freeze = auto_freeze
+        self.freeze_method = freeze_method
+        checked = pop('checked', None)
+        no_check = checked is not None and not checked
+        maybe_check = not no_check
+        found_keys = set()
+
+        check_kwargs(kwargs)  # raises TypeError if necessary
+
+        self._stack = []
+        self._key_lists = []
+        if args:
+            for arg in args:
+                if arg is None:
+                    if factory is None:
+                        dic = {}
+                    else:
+                        dic = factory()
+                else:
+                    if maybe_check:
+                        if isinstance(arg, dict):
+                            found_keys.update(arg.keys())
+                        else:
+                            found_keys.update([t[0] for t in arg])
+                    if factory is None:
+                        dic = arg
+                    else:
+                        dic = factory(arg)
+                if auto_freeze:
+                    freeze_method(dic)
+                self._stack.append(dic)
+                self._key_lists.append(list(dic.keys()))
+        if maybe_check and found_keys:
+            self._checked = True
+        else:
+            self._checked = False
+        if self._checked:
+            self._allowed_keys = found_keys
+
+    def _cleanup_key_lists(self):
+        all_keys = set()
+        for liz in self._key_lists:
+            delinquents = []
+            i = 0
+            for key in liz:
+                if key in all_keys:
+                    delinquents.append(i)
+                else:
+                    all_keys.add(key)
+                i += 1
+            for i in reversed(delinquents):
+                del liz[i]
+
+    def __iter__(self):
+        self._cleanup_key_lists()
+        for liz in self._key_lists:
+            for key in liz:
+                yield key
+
+    def __len__(self):
+        self._cleanup_key_lists()
+        L = 0
+        for liz in self._key_lists:
+            L += len(liz)
+        return L
+
+    def push(self, dic, raw=False, freeze=None):
+        """
+        Push a dictionary to the stack.
+        """
+        stack = self._stack
+        factory = self.factory
+        if raw or factory is None:
+            if not isinstance(dic, dict):
+                raise ValueError('not a dictionary: %(dic)r' % locals())
+        else:
+            dic = factory(dic)
+        if self._checked:
+            allowed = self._allowed_keys
+            if not allowed.issuperset(dic.keys()):
+                disallowed = ', '.join(sorted(set(dic.keys()).difference(allowed)))
+                raise ValueError('The given dictionary contains disallowed'
+                        ' keys! (%(disallowed)s)' % locals())
+        else:
+            self._key_lists.append(list(dic.keys()))
+        if freeze is None:
+            freeze = self.auto_freeze
+        if freeze:
+            freezer = self.freeze_method
+            freezer(dic)
+        stack.append(dic)
+
+    def pop(self):
+        if not self._checked:
+            del self._key_lists[-1]
+        return self._stack.pop()
+
+    def height(self):
+        """
+        Return the number of stacked member dictionaries
+
+        The length (len) of a dictionary is the number of keys;
+        we must not confuse this!
+        """
+        return len(self._stack)
+
+    def __getitem__(self, key):
+        for dic in reversed(self._stack):
+            try:
+                return dic[key]
+            except KeyError:
+                pass
+        raise KeyError(key)
 
 
 # aus @@groupsharing.utils wieder entfernt, weil die Werte vom shadow-dict

@@ -6,6 +6,7 @@ CSV-Unterstützung: Excel-kompatible CSV-Dateien erzeugen (Semikolon, UTF-8)
 """
 
 # Standardmodule:
+from __future__ import absolute_import
 from StringIO import StringIO  # hier importiert für Doctests
 from codecs import BOM_UTF8
 # from csv import writer as writer_, excel, register_dialect

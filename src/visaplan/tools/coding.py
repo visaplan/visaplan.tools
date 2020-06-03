@@ -3,6 +3,10 @@
 Coding/Decoding tools
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import map
+import six
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
            4,  # make_safe_decoder
@@ -74,16 +78,16 @@ def make_safe_decoder(preferred='utf-8', preflist=None, errors='replace',
 
     def handle_e(s, encoding, e, logger, devel):
         if devel:  # evtl. bessere Fehlernachricht entwickeln:
-            print str(e)
+            print(str(e))
             mask = '%-10s %r'
             for a in ['args', 'encoding',
                       'start', 'end',
                       'object',
                       'reason',
                       'message']:
-                print mask % (a, getattr(e, a))
+                print(mask % (a, getattr(e, a)))
             evil = s[start:end]
-            print mask % (' evil:', evil)
+            print(mask % (' evil:', evil))
         if logger is not None:
             logger.warn("Assuming %(encoding)r, can't decode %(s)r",
                         locals())
@@ -92,7 +96,7 @@ def make_safe_decoder(preferred='utf-8', preflist=None, errors='replace',
         """
         Nimm einen beliebigen Basestring und gib ihn als Unicode zurück
         """
-        if isinstance(s, unicode):
+        if isinstance(s, six.text_type):
             return s
         for encoding in preflist:
             try:
@@ -111,7 +115,7 @@ def make_safe_decoder(preferred='utf-8', preflist=None, errors='replace',
         """
         try:
             res = None
-            if isinstance(s, unicode):
+            if isinstance(s, six.text_type):
                 res = s
             else:
                 for encoding in preflist:
@@ -218,13 +222,13 @@ def safe_encode(s, charset='utf-8', errors='strict'):
     if not s:
         return ''
     # schon ein codierter String: einfach verwenden
-    if not isinstance(s, unicode):
+    if not isinstance(s, six.text_type):
         return s
     try:
         return s.encode(charset, 'strict')
     except UnicodeEncodeError as e:
-        print e
-        print "Can't encode %(s)r" % locals()
+        print(e)
+        print("Can't encode %(s)r" % locals())
         if errors == 'strict':
             raise
         return s.encode(charset, errors)
@@ -245,7 +249,7 @@ def make_safe_encoder(charset='utf-8', errors='replace',
         if not s:
             return ''
         # schon ein codierter String: einfach verwenden
-        if not isinstance(s, unicode):
+        if not isinstance(s, six.text_type):
             return s
         try:
             return s.encode(charset, 'strict')
@@ -287,7 +291,7 @@ def make_whitespace_purger(uchars=NON_XML_WHITESPACE_U):
     >>> piw(u'Verbau entfernen und Baugrube verf\xfcllen\x0b (Fortsetzung)')
     u'Verbau entfernen und Baugrube verf\xfcllen (Fortsetzung)'
     """
-    if not isinstance(uchars, unicode):
+    if not isinstance(uchars, six.text_type):
         raise ValueError('Ich will Unicode! (%r)' % (uchars,))
     ucharset = frozenset(uchars)
 
@@ -296,7 +300,7 @@ def make_whitespace_purger(uchars=NON_XML_WHITESPACE_U):
         Bereinige den übergebenen unicode-String bzgl. ungeeigneten Leerraums,
         z. B. vertikaler Tab-Zeichen (0x0b bzw. \v), die etree unverdaulich findet.
         """
-        if not isinstance(u, unicode):
+        if not isinstance(u, six.text_type):
             raise ValueError('Ich will Unicode! (%r)' % (u,))
         if not ucharset.intersection(u):
             return u

@@ -5,7 +5,13 @@ visaplan.tools.debug - Helferlein für Entwicklung und Debugging
 Autor: Tobias Herp
 """
 from __future__ import absolute_import, print_function
+
 from six import string_types as six_string_types
+from six import text_type as six_text_type
+from six.moves import map
+
+from visaplan.tools.minifuncs import check_kwargs
+
 # ACHTUNG - Importe aus dem unitracc-Produkt stets incl. des
 # Products-Kontexts vornehmen, also
 #   "from Products.unitracc.tools.ModulXY import ..."
@@ -451,7 +457,7 @@ def asciibox_lines(label, ch, width, kwargs):
     wid_ = width - 2
     empt = (' ' * wid_).join((ch, ch))
     liz = [asti, empt]
-    if isinstance(label, basestring):
+    if isinstance(label, six_string_types):
         assert not kwargs
         ham_ = label.strip().center(wid_).join((ch, ch))
         liz.append(ham_)
@@ -463,8 +469,8 @@ def asciibox_lines(label, ch, width, kwargs):
                                              **kwargs)))
         else:
             assert not kwargs
-            raw = map(str, label)
-        maxl = max(map(len, raw))
+            raw = list(map(str, label))
+        maxl = max(list(map(len, raw)))
         filled = ['%-*s' % (maxl, s)
                   for s in raw]
         liz.extend([s.center(wid_).join((ch, ch))
@@ -517,7 +523,7 @@ def print_indented(txt, indent=0):
         b
 
     """
-    if isinstance(txt, unicode):
+    if isinstance(txt, six_text_type):
         prefix = u' ' * indent
     else:
         prefix = ' ' * indent
@@ -607,11 +613,9 @@ def has_strings(haystack, *needles, **kwargs):
     other = pop('other', None)
     if isinstance(other, six_string_types):
         other = [other]
-    strict = pop('strict', True)
-    if strict and kwargs:
-        keys = ', '.join(kwargs.keys())
-        raise TypeError('Unsupported keyword argument(s)! (%(keys)s)'
-                        % locals())
+
+    check_kwargs(kwargs)  # raises TypeError if necessary
+
     found = []
     # The "needles" are our criterion to tell whether the result is interesting:
     _needle_tuples(haystack, needles, found, before=before, after=after)
@@ -633,7 +637,7 @@ def has_strings(haystack, *needles, **kwargs):
     else:
         func(repr(shortened))
     prev_offset = None
-    if isinstance(haystack, unicode):
+    if isinstance(haystack, six_text_type):
         zugabe = 5  # 'u' prefix
     else:
         zugabe = 4

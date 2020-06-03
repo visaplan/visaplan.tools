@@ -11,6 +11,22 @@ Changelog
     ``dicts.update_dict``.
 
 
+1.3.0 (unreleased)
+------------------
+
+New Features:
+
+- new module ``batches``, containing a `batch` function which generates (sublist, txt) tuples
+- new class ``classes.StackOfDicts``
+- new function ``minifuncs.check_kwargs``
+- new function ``debug.has_strings``
+- new function ``debug.make_debugfile_writer`` (not yet sufficiently generalized)
+
+Requirements:
+
+- six module, for Python 3 compatibility
+
+
 1.2.6 (2020-01-08)
 ------------------
 

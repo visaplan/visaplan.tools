@@ -5,12 +5,15 @@ lands0 -- "lists and strings 0"
 Die Funktionen dieses Moduls haben mit Strings und Listen zu tun;
 ihre Namen, Signaturen etc. sind noch vorläufig
 """
+from __future__ import absolute_import
+
+from six import string_types as six_string_types
+from six.moves import range
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
 # Standardmodule
 from string import strip
-
 
 __all__ = [
            # -------------- [ aus unitracc.tools.forms ... [
@@ -63,14 +66,14 @@ def list_of_strings(val, splitchar=None, splitfunc=None):
         return []
     elif isinstance(val, list):
         # aus Performanzgründen nur das erste Element prüfen:
-        if val and not isinstance(val[0], basestring):
+        if val and not isinstance(val[0], six_string_types):
             raise ValueError('list_of_strings: list contains non-strings!'
                              ' [%r%s]' % (val[0],
                                           val[1:] and ', ...' or ''))
         return val
     elif isinstance(val, set):
         return list_of_strings(sorted(val))
-    elif isinstance(val, basestring):
+    elif isinstance(val, six_string_types):
         pass
     else:
         return list_of_strings(list(val))
@@ -114,7 +117,7 @@ def string_of_list(val, splitchar='\n', transform=strip):
     """
     if val is None:
         return ''
-    elif isinstance(val, basestring):
+    elif isinstance(val, six_string_types):
         if transform is not None:
             return transform(val)
         return val
@@ -138,10 +141,10 @@ def lines_to_list(s):
     >>> lines_to_list('')
     []
     """
-    if isinstance(s, basestring):
+    if isinstance(s, six_string_types):
         s = s.splitlines()
-    return filter(None, [item.strip()
-                         for item in s])
+    return [_f for _f in [item.strip()
+                         for item in s] if _f]
 
 
 def as_new_list(val, splitfunc=None):
@@ -159,7 +162,7 @@ def as_new_list(val, splitfunc=None):
     """
     if val is None:
         return []
-    if not isinstance(val, basestring):
+    if not isinstance(val, six_string_types):
         return list(val)
     if splitfunc is None:
         return [s.strip() for s in val.split(',')]
@@ -190,7 +193,7 @@ def makeListOrNone(val, default=None, ch=','):
             return makeListOrNone(default)
     elif not val:
         return None
-    elif isinstance(val, basestring):
+    elif isinstance(val, six_string_types):
         val = val.split(ch)
         tmp = [s.strip() for s in val]
         return [s for s in tmp
@@ -252,7 +255,7 @@ def makeSet(s, **kwargs):
         pass
     elif isinstance(s, (list, tuple)):
         s = set(s)
-    elif isinstance(s, basestring):
+    elif isinstance(s, six_string_types):
         tmp = set()
         for chunk in s.splitlines():
             val = chunk.strip()
@@ -287,11 +290,11 @@ def groupstring(s, size=2, cumulate=False):
     """
     if cumulate:
         return [s[0:i + size]
-                for i in xrange(0, len(s), size)
+                for i in range(0, len(s), size)
                 ]
     else:
         return [s[i:i + size]
-                for i in xrange(0, len(s), size)
+                for i in range(0, len(s), size)
                 ]
 # -------------------------- ] ... aus unitracc.tools.misc ]
 

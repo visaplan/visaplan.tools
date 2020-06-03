@@ -2,9 +2,12 @@
 """\
 Tools für Python-Dictionarys
 """
+from __future__ import absolute_import
+
+from six import string_types as six_string_types
+from six.moves import filter
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
-
 
 # Standardmodule
 from collections import defaultdict
@@ -109,7 +112,7 @@ def subdict(form, keys=None, defaults={},
     res = {}
     aliases = {}
     if keys is None:
-        keys = form.keys()
+        keys = list(form.keys())
     else:
         # Alternativer Name für ersten Schlüssel
         primary_fallback = kwargs.pop('primary_fallback', None)
@@ -119,7 +122,7 @@ def subdict(form, keys=None, defaults={},
             aliases[keys[0]] = primary_fallback
 
     if keyfunc is not None:
-        keys = filter(keyfunc, keys)
+        keys = list(filter(keyfunc, keys))
 
     for key in keys:
         if key in form:
@@ -376,7 +379,7 @@ def getOption(odict, key, default=None, factory=NoneOrString,
         else:
             raise KeyError(key)
     val = odict[key]
-    if factory is not None and isinstance(val, basestring):
+    if factory is not None and isinstance(val, six_string_types):
         val = factory(val)
     if choices:
         try:

@@ -2,9 +2,12 @@
 """\
 Very small functions
 """
+from __future__ import absolute_import
+from __future__ import print_function
+
+from six import string_types as six_string_types
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
-
 
 __all__ = [
            'gimme_None',
@@ -17,6 +20,7 @@ __all__ = [
            'NoneOrString',
            'IntOrOther',
            'translate_dummy',
+           'check_kwargs',
            ]
 # -------------------------------------------- [ Daten ... [
 LOWER_TRUE = frozenset('yes y ja j true on'.split() +
@@ -47,7 +51,7 @@ def gimmeConst__factory(val):
 
 def makeBool(val, default=None):
     """
-    gib einen Wahrheitswert zurueck
+    gib einen Wahrheits- oder Zahlenwert zurueck
 
     val -- ein Variablenwert, meistens der Wert einer Request-Variablen;
            ein String.
@@ -63,6 +67,8 @@ def makeBool(val, default=None):
     False
     >>> makeBool('', 'yes')
     True
+    >>> makeBool(42)
+    42
     >>> makeBool('1')
     1
     >>> makeBool(None)
@@ -73,6 +79,30 @@ def makeBool(val, default=None):
     >>> options = {}
     >>> makeBool(options.get('verbose'), 'false')
     False
+
+    Bei fehlerhaften Werten gibt es einen ValueError:
+
+    >>> makeBool('vielleicht')
+    Traceback (most recent call last):
+    ...
+    ValueError: invalid literal for int() with base 10: 'vielleicht'
+
+    VORSICHT bei der Kombination von Zahlen mit default='yes'!
+    Wenn die Zahl als String übergeben wird, ist alles gut:
+
+    >>> makeBool('0', default='yes')
+    0
+    >>> makeBool('42', default='yes')
+    42
+
+    Nun kommt der Fehler.
+    Wird 0 als fertige Zahl übergeben, gewinnt bisher der Vorgabewert:
+
+    >>> makeBool(0, default='yes')
+    True
+
+    Hierauf bitte nicht verlassen!
+    Dieses Verhalten wird mutmaßlich in einer späteren Version korrigiert werden.
     """
     try:
         if default is None:
@@ -99,7 +129,7 @@ def NoneOrBool(val):
     """
     if val in (None, '', 'None'):
         return None
-    elif isinstance(val, basestring):
+    elif isinstance(val, six_string_types):
         val = val.strip().lower()
         if val in ('', 'none'):
             return None
@@ -118,14 +148,14 @@ def NoneOrInt(val):
     """
     if val in (None, '', 'None'):
         return None
-    elif isinstance(val, basestring) and not val.strip():
+    elif isinstance(val, six_string_types) and not val.strip():
         return None
     try:
         return int(val)
     except KeyError:
         return None
     except (TypeError, ValueError) as e:
-        print '*** NoneOrInt: Kann %(val)r nicht nach int konvertieren' % locals()
+        print('*** NoneOrInt: Kann %(val)r nicht nach int konvertieren' % locals())
         raise
 
 
@@ -180,6 +210,177 @@ def translate_dummy(s, *args, **kwargs):
     'test'
     """
     return s
+
+
+def check_kwargs(checked_kwargs, **my_kwargs):
+    """
+    A little helper for functions which accept many keyword arguments;
+    checks for invalid keyword arguments in the given dict and (by default)
+    raises the expected TypeError.
+
+    >>> check_kwargs({'unknown': 42})
+    Traceback (most recent call last):
+    ...
+    TypeError: Unknown option 'unknown' found!
+
+    You can choose to continue processing even for unknown keys;
+    in this case, the boolean result tells whether there have been warnings:
+    >>> check_kwargs({'unknown': 42, 'strict': False})
+    True
+
+    In such cases you'll likely want some logging.
+    >>> class MiniLog(object):
+    ...     def __init__(self):
+    ...         self._log = []
+    ...     def warn(self, msg, mapping=None):
+    ...         if mapping is not None:
+    ...             msg %= mapping
+    ...         self._log.append(msg)
+    ...     def __str__(self):
+    ...         return self._log[-1]
+
+    If a logger is given, `strict` defaults to False, and warnings are logged:
+    >>> logger=MiniLog()
+    >>> check_kwargs({'unknown': 42}, logger=logger)
+    True
+    >>> str(logger)
+    "Unknown option 'unknown' found!"
+    
+    It is quite common for the checked dictionary to be empty:
+    >>> check_kwargs({})
+    False
+
+    The checking function itself accepts named-only options, and of course it
+    checks whether it is called correctly.
+    It is always strict when it comes to its own options, and it checks its own
+    options first:
+    >>> check_kwargs({'any': 42}, bogus=42)
+    Traceback (most recent call last):
+    ...
+    TypeError: Unknown option 'bogus' found!
+    >>> check_kwargs({'any': 42})
+    Traceback (most recent call last):
+    ...
+    TypeError: Unknown option 'any' found!
+
+    NOTE that currently this check is performed *only* if a non-empty checked
+    arguments dict was given; this is because we had a recursion problem
+    otherwise:
+
+    >>> check_kwargs({}, bogus=42)
+    False
+
+    This means you might have an error in your usage and not be aware of it
+    until the function finds a non-empty (while possibly still acceptable)
+    input dictionary.
+
+    We consider this acceptable, since you'll get an information about the
+    rejected option name, and the exception raised is the same.
+
+    Now for the more exotic options.
+    You might have a convention which uses another option name than 'strict':
+
+    >>> check_kwargs({'pingelig': False})
+    Traceback (most recent call last):
+    ...
+    TypeError: Unknown option 'pingelig' found!
+
+    You can tell the function about this name:
+
+    >>> check_kwargs({'pingelig': False}, strict_key='pingelig')
+    False
+
+    You might put your options in a dict for easier reusing them:
+    >>> check_kw = dict(strict_key='pingelig', logger=logger)
+    >>> check_kwargs({'pingelig': False, 'bogus': 42}, **check_kw)
+    True
+    >>> str(logger)
+    "Unknown option 'bogus' found!"
+        
+    But you can override the laxness from the checked dict and choose to be
+    strict anyway:
+    >>> check_kwargs({'pingelig': False, 'bogus': 42}, strict=True, **check_kw)
+    Traceback (most recent call last):
+    ...
+    TypeError: Unknown option 'bogus' found!
+
+    The `strict` key is considered to be aimed for this checking function,
+    so it is consumed by default:
+
+    >>> opt = {'strict': True}
+    >>> check_kwargs(opt)
+    False
+    >>> opt
+    {}
+
+    You can retain it, however, for further use:
+
+    >>> opt = {'strict': True}
+    >>> check_kwargs(opt, strict_pop=False)
+    False
+    >>> opt
+    {'strict': True}
+
+    And finally, you can decide you don't want this `strict` handling at all,
+    and tell the function you don't have a `strict_key`:
+
+    >>> check_kwargs({'strict': False}, strict_key=None)
+    Traceback (most recent call last):
+    ...
+    TypeError: Unknown option 'strict' found!
+
+    """
+    # ssort-circuit check: if the given dict is empty, it can't contain unknown
+    # keys. NOTE that in this case, the keyword arguments of the checking
+    # function itself are not checked!  This is to avoid a recursion problem.
+    if not checked_kwargs:
+        return False
+
+    pop = my_kwargs.pop
+    allowed = pop('allowed', None)
+    if allowed is None:
+        allowed = set()
+    elif isinstance(allowed, six_string_types):
+        raise ValueError('allowed option must be a non-string sequence,'
+                         ' preferably a set! (%(allowed)r)'
+                         % locals())
+    else:
+        allowed = set(allowed)
+
+    logger = pop('logger', None)
+    strict_pop = pop('strict_pop', True)
+    strict_key = pop('strict_key', 'strict')
+    strict_default = pop('strict_default', logger is None)
+    strict = None
+    if 'strict' in my_kwargs:
+        strict = pop('strict')
+
+    # We make sure *this function* is called correctly.
+    check_kwargs(my_kwargs)
+
+    if strict is not None:
+        pass
+    elif not strict_key:
+        strict = True
+    else:
+        if strict_pop:
+            strict = checked_kwargs.pop(strict_key, strict_default)
+        else:
+            strict = checked_kwargs.get(strict_key, strict_default)
+            allowed.add(strict_key)
+    res = False
+    for key in checked_kwargs.keys():
+        if key in allowed:
+            continue
+        elif strict:
+            raise TypeError('Unknown option %(key)r found!' % locals())
+        else:
+            res = True
+            if logger is not None:
+                # TODO: we might want to extract some information
+                #       from the stacktrace here ... 
+                logger.warn('Unknown option %(key)r found!', locals())
+    return res
 
 
 if __name__ == '__main__':

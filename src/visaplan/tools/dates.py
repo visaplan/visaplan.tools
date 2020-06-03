@@ -3,6 +3,7 @@
 Tools zur Transformation von Datumswerten
 """
 
+from __future__ import absolute_import
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
 

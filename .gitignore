@@ -10,22 +10,29 @@ __pycache__/
 # C extensions
 *.so
 
+# Buildout
+parts/
+buildout-cache/
+develop-eggs/
+.installed.cfg
+.mr.developer.cfg
+.installed.cfg
+
 # Distribution / packaging
 .Python
 build/
-develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
 lib/
 lib64/
-parts/
+local/
 sdist/
+test.plone_addon/
 var/
 wheels/
 *.egg-info/
-.installed.cfg
 *.egg
 MANIFEST
 
@@ -95,11 +102,12 @@ ENV/
 env.bak/
 venv.bak/
 
-# VirtualEnv
+# VirtualEnv / Virtual Environment
 bin/
-include/
 Scripts/
+include/
 lib64
+pip-selfcheck.json
 .profile
 
 # Spyder project settings
@@ -115,13 +123,29 @@ lib64
 # mypy
 .mypy_cache/
 
-# Subversion
-.svn
+# SCM
+.svn/
 
-# visaplan project tools/setup
-update-module
+# visaplan environment
 auto.msg
-scripts/
+tools/
+update-module
 init
 init.vim
 CHANGES-in-*.rst
+
+# plonecli-generated
+log.html
+output.xml
+package.json
+pip-selfcheck.json
+report.html
+.vscode/
+# excludes
+!.coveragerc
+!.editorconfig
+!.gitattributes
+!.gitignore
+!.gitkeep
+!.travis.yml
+!src/visaplan

@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- vim: ts=8 sts=4 sw=4 si et tw=79
 
-from urlparse import urlsplit, urlunsplit
+from __future__ import absolute_import
+from six.moves.urllib.parse import urlsplit, urlunsplit
 
 try:
-    from httplib import responses as http_responses
+    from six.moves.http_client import responses as http_responses
 except ImportError:
     # Mapping status codes to official W3C names
     http_responses = {

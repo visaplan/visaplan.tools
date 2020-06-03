@@ -2,6 +2,10 @@
 """\
 Tools for sequences
 """
+from __future__ import absolute_import
+
+from six import string_types as six_string_types
+from six.moves import map, range
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
@@ -227,7 +231,7 @@ def make_names_tupelizer(forbidden,
     forbidden = set(forbidden)
 
     def strict(liz):
-        if isinstance(liz, basestring):
+        if isinstance(liz, six_string_types):
             raise TypeError('non-string sequence expected; got: %(liz)r'
                             % locals())
         unique = set(liz)
@@ -238,7 +242,7 @@ def make_names_tupelizer(forbidden,
         return tuple(sorted(unique))
 
     def forgiving(liz):
-        if isinstance(liz, basestring):
+        if isinstance(liz, six_string_types):
             raise TypeError('non-string sequence expected; got: %(liz)r'
                             % locals())
         unique = set(liz)

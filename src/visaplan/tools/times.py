@@ -3,6 +3,8 @@
 Tools for time calculations
 """
 
+from __future__ import absolute_import
+from six.moves import map
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
            4,  # make_safe_decoder, now --> .coding
@@ -15,6 +17,8 @@ __version__ = '.'.join(map(str, VERSION))
 from time import localtime, strftime, mktime, strptime
 from time import gmtime
 from calendar import timegm
+
+from visaplan.tools.minifuncs import check_kwargs
 
 __all__ = [
            'makeDeltaTime',
@@ -114,10 +118,9 @@ def make_defaulttime_calculator(year=0, month=0, day=0,
     """
     pop = kwargs.pop
     utc = pop('utc', False)
-    if kwargs:
-        raise TypeError('Undefined keyword argument(s)! %s'
-                        % (kwargs.keys(),
-                           ))
+
+    check_kwargs(kwargs)  # raises TypeError if necessary
+
     if utc:
         time_factory = gmtime
         time_to_secs = timegm

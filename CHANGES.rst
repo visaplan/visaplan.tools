@@ -2,13 +2,54 @@ Changelog
 =========
 
 
-1.3 (unreleased)
-----------------
+2.0.0 (unreleased)
+------------------
 
 - Breaking changes:
 
   - Signature change (e.g. name of first argument: ``form`` --> ``dic``) for
     ``dicts.update_dict``.
+
+
+1.3.0 (unreleased)
+------------------
+
+New Features:
+
+- new module ``batches``, containing a `batch` function which generates (sublist, txt) tuples
+- new class ``classes.StackOfDicts``
+- new function ``minifuncs.check_kwargs``
+- new function ``debug.has_strings``
+- new function ``debug.make_debugfile_writer`` (not yet sufficiently generalized)
+
+Requirements:
+
+- six module, for Python 3 compatibility
+
+
+1.2.6 (2020-01-08)
+------------------
+
+Improvements:
+
+- Travis CI integration added.
+- Test discovery configuration for nose2 (used on Travis) and nose.
+
+Bugfixes:
+
+- Fixed doctests for
+
+  - ``.dicts.update_dict``
+  - ``.dicts.make_key_injector``
+
+- Removed now-obsolete ...tests/test_doctests.py file which caused ``nosetests`` to fail.
+
+New Features:
+
+- ``.times.make_defaulttime_calculator``: new keyword-only option ``utc=False``,
+  to make the doctests work with Travis.
+
+[tobiasherp]
 
 
 1.2.5 (2019-10-16)

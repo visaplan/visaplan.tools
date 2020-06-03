@@ -4,6 +4,14 @@ visaplan.tools.debug - Helferlein für Entwicklung und Debugging
 
 Autor: Tobias Herp
 """
+from __future__ import absolute_import, print_function
+
+from six import string_types as six_string_types
+from six import text_type as six_text_type
+from six.moves import map
+
+from visaplan.tools.minifuncs import check_kwargs
+
 # ACHTUNG - Importe aus dem unitracc-Produkt stets incl. des
 # Products-Kontexts vornehmen, also
 #   "from Products.unitracc.tools.ModulXY import ..."
@@ -28,8 +36,9 @@ __all__ = [
            # Metadekoratoren (Dekorator-Erzeuger):
            'log_result',
            # ------------------------ ] ... aus unitracc.tools.debug ]
+           'has_strings',     # mit formatierter Ausgabe
+           # make_debugfile_writer  (requires some more love; see below) 
            ]
-
 
 # Standardmodule:
 from functools import wraps
@@ -278,13 +287,13 @@ def trace_this(func):
     @wraps(func)
     def inner(*args, **kwargs):
         label = [LABEL] + list(args)
-        print asciibox(label, kwargs=kwargs)
+        print(asciibox(label, kwargs=kwargs))
         import pdb
         pdb.set_trace()  # --------- # @trace_this (sichtbarer Hinweis):
         res = func(*args, **kwargs)  # [s]tep into
         # TODO: - trace automatisch wieder zurücksetzen
         #       - evtl. Ergebnisausgabe weiter aufhübschen
-        print AFTERDARK
+        print(AFTERDARK)
         pprint(res)
         return res
 
@@ -448,7 +457,7 @@ def asciibox_lines(label, ch, width, kwargs):
     wid_ = width - 2
     empt = (' ' * wid_).join((ch, ch))
     liz = [asti, empt]
-    if isinstance(label, basestring):
+    if isinstance(label, six_string_types):
         assert not kwargs
         ham_ = label.strip().center(wid_).join((ch, ch))
         liz.append(ham_)
@@ -460,8 +469,8 @@ def asciibox_lines(label, ch, width, kwargs):
                                              **kwargs)))
         else:
             assert not kwargs
-            raw = map(str, label)
-        maxl = max(map(len, raw))
+            raw = list(map(str, label))
+        maxl = max(list(map(len, raw)))
         filled = ['%-*s' % (maxl, s)
                   for s in raw]
         liz.extend([s.center(wid_).join((ch, ch))
@@ -514,18 +523,18 @@ def print_indented(txt, indent=0):
         b
 
     """
-    if isinstance(txt, unicode):
+    if isinstance(txt, six_text_type):
         prefix = u' ' * indent
     else:
         prefix = ' ' * indent
     try:
         for line in txt.splitlines():
             try:
-                print prefix + line.rstrip()
+                print(prefix + line.rstrip())
             except UnicodeEncodeError as e:
-                print '*** Hoppla! %s (%r)' % (e, line.rstrip())
+                print('*** Hoppla! %s (%r)' % (e, line.rstrip()))
     except UnicodeEncodeError as e:
-        print '!!! %s' % (e, )
+        print('!!! %s' % (e, ))
 
 
 def make_sleeper(logger, default=2, method='info'):
@@ -548,24 +557,158 @@ def make_sleeper(logger, default=2, method='info'):
 # ----------------------------------- ] ... aus unitracc.tools.debug ]
 
 
+def _needle_tuples(haystack, needles, found, before, after):
+    """
+    Little helper function for has_strings; see below.
+
+    This list is filled in-place:
+    >>> found = []
+
+    The haystack is searched for the given needles; before and after
+    specify the amount of context.
+    >>> haystack = 'Some haystack  which contains needles'
+    >>> needles = ['  ', 'needle']
+
+    This little helper returns nothing ...
+    >>> _needle_tuples(haystack, needles, found, before=5, after=10)
+
+    ... since the calling function will find the list filled:
+    >>> found
+    [(8, 13, 25, '  '), (25, 30, 46, 'needle')]
+    """
+    for needle in needles:
+        start = 0
+        needle_len = len(needle)
+        found_at = haystack.find(needle, start)
+        while found_at >= 0:
+            found.append((max(found_at-before, 0),
+                          found_at,
+                          found_at+needle_len+after,
+                          needle,
+                          ))
+            start = found_at + needle_len
+            found_at = haystack.find(needle, start)
+
+
+def has_strings(haystack, *needles, **kwargs):
+    r"""
+    Search the given text <haystack> for the given "needles"; if found anything,
+    print an information (unless some other function was specified)
+    and return True.
+
+    >>> txt = 'Vitaler Nebel mit Sinn ist im Leben relativ'
+    >>> liz = []
+    >>> has_strings(txt, 'Nebel', 'r', before=3, after=5, head=10,
+    ...             func=liz.append)
+    True
+    >>> liz
+    ["'Vitaler Ne'...", '        v', " 6: 'aler Nebe'", " 8: 'er Nebel mit '", "36: 'en relati'"]
+    """
+    pop = kwargs.pop
+    before = max(pop('before', 20), 0)
+    after = max(pop('after', 20), 0)
+    head = max(pop('head', 76), 0)
+    label = pop('label', None)
+    func = pop('func', print)
+    other = pop('other', None)
+    if isinstance(other, six_string_types):
+        other = [other]
+
+    check_kwargs(kwargs)  # raises TypeError if necessary
+
+    found = []
+    # The "needles" are our criterion to tell whether the result is interesting:
+    _needle_tuples(haystack, needles, found, before=before, after=after)
+    if not found:
+        return False
+
+    # If it is interesting, we might want to know more:
+    if other:
+        _needle_tuples(haystack, other, found, before=before, after=after)
+
+    found.sort()
+    found_max = found[-1][1]
+    max_len = len(str(found_max))
+    if label:
+        func(label)
+    shortened = haystack[:head]
+    if haystack[head:]:
+        func(repr(shortened)+'...')
+    else:
+        func(repr(shortened))
+    prev_offset = None
+    if isinstance(haystack, six_text_type):
+        zugabe = 5  # 'u' prefix
+    else:
+        zugabe = 4
+    for tup in found:
+        start, found_at, end, needle = tup
+        offset = found_at - start
+        if offset and offset != prev_offset:
+            func('%+*s' % (offset + max_len + zugabe, 'v'))
+            prev_offset = offset
+        func('%*d: %r' % (max_len, found_at, haystack[start:end]))
+    return True
+
+
+def make_debugfile_writer(dirname, **kwargs):
+    """
+    Debugging helper: write a file, taking the raw ajax-nav dictionary
+    (not jsonified)
+
+    NOTE: For this function to be generally useful, it requires some
+          more love.  It was written for the returned function to take a
+          dictionary with "content" (HTML text) and "@title" keys.
+    """
+    cnt = {'files': 0}
+    pop = kwargs.pop
+    datemask = pop('datemask', '%a-%H%M%S')
+    dirseg = strftime(datemask)
+    fulldir = path_join(dirname, dirseg) 
+    makedirs(fulldir)
+    print('Creating files in directory %(fulldir)s'
+          % locals())
+    width = pop('width', 4)
+    num_mask = '%%0%dd' % int(width)
+
+    def write_file(dic):
+        text = dic.get('content')
+        if not text:
+            print('*** No text!')
+            return
+        number = cnt['files'] + 1
+        cnt['files'] = number
+        title = dic.get('@title')
+        name = num_mask % number
+        if title:
+            name += '--' + title
+        name += '.html'
+        full_name = path_join(fulldir, name)
+        with open(full_name, 'wb') as f:
+            f.write(text)
+        print('*** %(full_name)s written' % locals())
+
+    return write_file
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
 
     def a():
-        print 'Funktion a ...'
-        print '\n'.join(pretty_callstack())
-        print '... Funktion a'
+        print('Funktion a ...')
+        print('\n'.join(pretty_callstack()))
+        print('... Funktion a')
 
     def b():
-        print 'Funktion b ...'
+        print('Funktion b ...')
         a()
-        print '... Funktion b'
+        print('... Funktion b')
 
     def c():
-        print 'Funktion c ...'
+        print('Funktion c ...')
         b()
-        print '\n'.join(pretty_callstack())
-        print '... Funktion c'
+        print('\n'.join(pretty_callstack()))
+        print('... Funktion c')
     
     c()

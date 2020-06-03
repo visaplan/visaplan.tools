@@ -4,9 +4,12 @@
 # Die direkte Verwendung von htmlentitydefs.entitydefs ergibt leider nicht
 # zuverlässig das korrekte Unicode-Zeichen, z.B. im Falle von &nbsp;
 
-from htmlentitydefs import name2codepoint
+from __future__ import absolute_import
+from six.moves.html_entities import name2codepoint
 from string import whitespace
 from codecs import BOM_UTF8
+from six import unichr
+import six
 
 
 __all__ = ('entity',  # ein HtmlEntityProxy
@@ -65,7 +68,7 @@ class HtmlEntityProxy(dict):
 
 
 entity = HtmlEntityProxy()
-WHITESPACE = set(unicode(whitespace))
+WHITESPACE = set(six.text_type(whitespace))
 # print sorted(WHITESPACE)
 for entity_name in WHITESPACE_ENTITY_NAMES:
     WHITESPACE.add(entity[entity_name])
@@ -134,7 +137,7 @@ def _unicode_without_bom(s, charset='utf-8'):
     >>> _unicode_without_bom(u'def')
     u'def'
     """
-    if isinstance(s, unicode):
+    if isinstance(s, six.text_type):
         return s
     # BOM-Präfix ist kein Unicode, sondern eine Bytes-Folge
     # --> implizit ausgelöste Decodierung von s

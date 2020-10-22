@@ -33,14 +33,14 @@ keine weiteren stopwatch.lap-Aufrufe möglich.
 
 Siehe auch .cfg.get_debug_active, .log.getLogSupport
 """
+# Python compatibility:
+from __future__ import absolute_import, print_function
 
-# Standardmodule:
-from __future__ import absolute_import
-from __future__ import print_function
-from time import time
+# Standard library:
 from functools import wraps
+from time import time
 
-# Unitracc-Tools:
+# visaplan:
 from visaplan.tools.classes import Proxy
 
 # Daten:
@@ -114,6 +114,13 @@ class StopWatch(object):
         Mini-Logger-Methode
         """
         print(txt % args)
+
+    def __repr__(self):
+        return '<%s.%s(%r)>' % (
+            self.__module__,
+            self.__class__.__name__,
+            self.txt,
+            )
 
     def lap(self, txt, delta=None):
         if self._disabled:

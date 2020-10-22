@@ -91,10 +91,18 @@ function add_renamed() {
 
 function merge_part() {
 	local dest="$1" src thetail success=''
+	local altdest=''
 	case "$dest" in
 			# um $DEST_PATH/__init__.py zu ignorieren:
 			# svn merge ^/products/visaplan.plone.tools/branches/v1_0 . -c22748
+		tools/*)
+			# altdest=$(echo "$dest" | sed 's,tools,scripts,')
+			filewarning "$dest" || return 1
+			src="$dest"
+			thetail=''
+			;;
 		scripts/*)
+			# altdest=$(echo "$dest" | sed 's,scripts,tools,')
 			filewarning "$dest" || return 1
 			src="$dest"
 			thetail=''
@@ -157,6 +165,10 @@ function merge_part() {
 			# Achtung, nur ein kleiner Teil von ...:
 			add_renamed "$dest" forms.py
 			;;
+		$DEST_PATH/sql.py)
+			# Achtung, nur ein kleiner Teil von visaplan.plone.sqlwrapper:
+			add_renamed "$dest" utils.py
+			;;
 		$DEST_PATH|$DEST_PATH/)
 			if [ -z "$REVARGS" ]; then
 				err "Quelle '$dest' erfordert die Angabe von Revisionen (wirklich keine Kopie)!"
@@ -177,9 +189,9 @@ function merge_part() {
 	esac
 	# -------- [ Behandlung etwaiger Umbenennungen ... [
 	# -------- ] ... Behandlung etwaiger Umbenennungen ]
-	echo svn merge $SVNARGS "$SOURCE_ROOT/$src $dest ..."
+	echo svn merge "${SVNARGS[*]}" "$SOURCE_ROOT/$src $dest ..."
 	DONE_ANYTHING='x'
-	if svn merge $SVNARGS "$SOURCE_ROOT/$src" "$dest"; then
+	if svn merge "${SVNARGS[@]}" "$SOURCE_ROOT/$src" "$dest"; then
 		success='x'
 	else
 		err "Fehler bei Nachführung von Änderungen; RC=$?"
@@ -212,7 +224,7 @@ function merge_part() {
 SOURCE_ROOT=''
 # enthalten in SVNARGS, aber für Prüfung verfügbar:
 REVARGS=''
-SVNARGS=''
+declare -a SVNARGS RECORDING
 FROMPRODUCT=''
 FROMMONOLITH=''
 BRANCHSPEC=''
@@ -274,7 +286,7 @@ for arg in "$@"; do
 				;;
 			-[cr]*)
 				REVARGS="$arg"
-				SVNARGS="$SVNARGS $arg"
+				SVNARGS=( "${SVNARGS[@]}" "$arg" )
 				;;
 	# ---------------------- [ Konfliktbereinigung ... [
 			--accept=*)
@@ -287,9 +299,19 @@ for arg in "$@"; do
 				PENDING="$arg"
 				;;
 	# ---------------------- ] ... Konfliktbereinigung ]
-			--record-only)
-				SVNARGS="$SVNARGS $arg"
+	# ----------------------------- [ Aufzeichnung ... [
+			--ignore-ancestry)
+				SVNARGS=( "${SVNARGS[@]}" "$arg" )
+				RECORDING=( "${RECORDING[@]}" "$arg" )
 				;;
+			--record-only)
+				SVNARGS=( "${SVNARGS[@]}" "$arg" )
+				RECORDING=( "${RECORDING[@]}" "$arg" )
+				;;
+			--recorded)
+				RECORDING=( "${RECORDING[@]}" "$arg" )
+				;;
+	# ----------------------------- ] ... Aufzeichnung ]
 # ------------------------------------------ ] ... svn-Optionen ]
 			-*)
 				err "Unbekannte Option: '$arg'"
@@ -307,7 +329,7 @@ for arg in "$@"; do
 				;;
 			-[cv])
 				REVARGS="$PENDING$arg"
-				SVNARGS="$SVNARGS $PENDING$arg"
+				SVNARGS=( "${SVNARGS[@]}" "$PENDING$arg" )
 				;;
 			--accept)
 				ACCEPT="$PENDING=$arg"
@@ -346,8 +368,16 @@ fi
 if [ -n "$PENDING" ]; then
 	err "$PENDING erwartet ein Argument"
 fi
+if [ ${#RECORDING[*]} -gt 1 ]; then
+	err "Optionen-Konflikt: ${RECORDING[*]}"
+elif [ "${RECORDING[*]}" == '--recorded' ]; then
+	if [ -n "${SVNARGS[*]}" ]; then
+		err "Option --recorded unterstützt keine weiteren SVN-Optionen (${SVNARGS[*]})"
+	fi
+	err "Option --recorded ist leider noch nicht implementiert"
+fi
 if [ -n "$ACCEPT" ]; then
-	SVNARGS="$SVNARGS $ACCEPT"
+	SVNARGS=( "${SVNARGS[@]}" "$ACCEPT" )
 fi
 if [ -z "$FROMPRODUCT" ]; then
 	check_monolith
@@ -446,7 +476,7 @@ else
 			;;
 		*)
 			info "Subversion-Kommando zum manuellen Aufruf:"
-			echo "svn merge $SOURCE_ROOT .$SVNARGS" >&2
+			echo "svn merge ${SVNARGS[*]} $SOURCE_ROOT ." >&2
 			err "Produkt '$FROMPRODUCT': wo gibt es hier etwas für '$MYPRODUCT'?!"
 	esac
 	esac  # case "$PART" -- nur Änderungen aus tools/?

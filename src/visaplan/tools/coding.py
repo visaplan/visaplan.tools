@@ -3,10 +3,12 @@
 Coding/Decoding tools
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-from six.moves import map
+# Python compatibility:
+from __future__ import absolute_import, print_function
+
 import six
+from six.moves import map
+
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
            4,  # make_safe_decoder
@@ -264,6 +266,7 @@ def make_safe_encoder(charset='utf-8', errors='replace',
                 logger.error('(max.) %d Zeichen davor: %r', 20, txt[start-20:start])
                 logger.exception(e)
             if devel:
+                # Logging / Debugging:
                 from pdb import set_trace
                 set_trace()
             if errors == 'strict':
@@ -319,5 +322,6 @@ purge_inapt_whitespace = make_whitespace_purger()
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

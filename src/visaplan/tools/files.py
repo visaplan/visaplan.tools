@@ -2,6 +2,7 @@
 """\
 Dateisystem-Tools für Unitracc
 """
+# Python compatibility:
 from __future__ import absolute_import
 
 from six import string_types as six_string_types
@@ -14,12 +15,20 @@ VERSION = (0,
 __version__ = '.'.join(map(str, VERSION))
 
 
-# Standardmodule
-from os.path import (getmtime, isdir, isfile, exists,
-        abspath, dirname, splitext, split,
-        )
-from os import makedirs
+# Standard library:
 from glob import glob
+from os import makedirs
+from os.path import (
+    abspath,
+    dirname,
+    exists,
+    getmtime,
+    isdir,
+    isfile,
+    split,
+    splitext,
+    )
+
 
 # für Testbarkeit:
 class Silent(object):
@@ -30,6 +39,7 @@ class Silent(object):
 # import is expected to fail;
 # no location for .log module yet:
 try:
+    # Local imports:
     from .log import getLogSupport
 except (ImportError, ValueError):
     if 0 and __name__ != '__main__':
@@ -175,5 +185,6 @@ def make_mtime_checker(logger=logger,
 
 
 if __name__ == '__main__':  # currently no useful doctests
+    # Standard library:
     import doctest
     doctest.testmod()

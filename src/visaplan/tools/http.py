@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- vim: ts=8 sts=4 sw=4 si et tw=79
 
+# Python compatibility:
 from __future__ import absolute_import
+
 from six.moves.urllib.parse import urlsplit, urlunsplit
 
 try:
+    # Python compatibility:
     from six.moves.http_client import responses as http_responses
 except ImportError:
     # Mapping status codes to official W3C names
@@ -136,5 +139,6 @@ def extract_hostname(url):
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

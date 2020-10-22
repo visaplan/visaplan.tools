@@ -5,13 +5,17 @@ CSV-Unterstützung: Excel-kompatible CSV-Dateien erzeugen (Semikolon, UTF-8)
 (initial extrahiert aus tan-Browser)
 """
 
-# Standardmodule:
+# Python compatibility:
 from __future__ import absolute_import
-from StringIO import StringIO  # hier importiert für Doctests
-from codecs import BOM_UTF8
+
+# Standard library:
 # from csv import writer as writer_, excel, register_dialect
 # from csv import register_dialect
 import csv
+from codecs import BOM_UTF8
+
+# 3rd party:
+from StringIO import StringIO  # hier importiert für Doctests
 
 __all__ = ['ExcelSSV',  # Excel+ssv (semicolon-separated values)
            'csv_writer',

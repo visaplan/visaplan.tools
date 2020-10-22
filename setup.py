@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*- vim: et ts=8 sw=4 sts=4 si tw=79 cc=+1
 """Installer for the visaplan.tools package."""
+# Python compatibility:
 from __future__ import absolute_import
-from __future__ import print_function
 
-from setuptools import find_packages
-from setuptools import setup
+# Setup tools:
+from setuptools import find_packages, setup
+
+# Standard library:
 from os.path import isfile
 
 package_name = 'visaplan.tools'
@@ -25,7 +27,7 @@ def valid_suffix(suffix):
     suffix = suffix.strip()
     if not suffix:
         return suffix
-    allowed = set('.dev0123456789')
+    allowed = set('.dev0123456789rc')
     disallowed = set(suffix).difference(allowed)
     if disallowed:
         disallowed = ''.join(sorted(disallowed))
@@ -129,7 +131,7 @@ def github_urls(package, **kwargs):
     return res
 project_urls = github_urls(package_name,
                            travis=True,
-                           pop_user=0)  # or pick_user=1, or github=0
+                           pop_user=0)
 # ------------------------------------------- ] ... for setup_kwargs ]
 
 setup_kwargs = dict(
@@ -142,6 +144,7 @@ setup_kwargs = dict(
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
         "Intended Audience :: Developers",
         "Natural Language :: German",
         "Operating System :: OS Independent",
@@ -160,16 +163,8 @@ setup_kwargs = dict(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'six',
     ],
-    extras_require={
-        'test': [
-            'plone.app.testing',
-            # plone.app.robotframework 1.2.0 requires plone.testing 4.0.11; 
-            # plone.app.robotframework 1.3+ drops Plone 4.3 compatibility:
-            'plone.testing',
-            'plone.app.robotframework[debug]',
-        ],
-    },
     entry_points="""
     [z3c.autoinclude.plugin]
     target = plone

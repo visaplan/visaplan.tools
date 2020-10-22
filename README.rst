@@ -1,8 +1,12 @@
-.. image:: https://travis-ci.org/visaplan/visaplan.tools.svg?branch=master
-       :target: https://travis-ci.org/visaplan/visaplan.tools
 .. This README is meant for consumption by humans and pypi. Pypi can render rst files so please do not use Sphinx features.
    If you want to learn more about writing documentation, please check out: http://docs.plone.org/about/documentation_styleguide.html
    This text does not appear on pypi or github. It is a comment.
+
+.. image:: https://travis-ci.org/visaplan/visaplan.tools.svg?branch=master
+       :target: https://travis-ci.org/visaplan/visaplan.tools
+.. image::
+   https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
+       :target: https://pycqa.github.io/isort/
 
 ==============
 visaplan.tools
@@ -13,10 +17,10 @@ This is a collection of utility modules for Python projects.
 Features
 --------
 
-- ``buildout`` module, for ``buildout``-built projects:
+- ``buildout`` module, for buildout_-built projects:
 
   Function ``checkPathForPackage`` to check a given package against a versions whitelist.
-  Useful if you like to constain the versions of that package without actually requiring it.
+  Useful if you like to constrain the versions of that package without actually requiring it.
 
 - ``coding`` module:
 
@@ -25,6 +29,10 @@ Features
 - ``classes`` module:
 
   Several simple but useful classes derived from Python dicts, e.g. ``Mirror`` and ``Proxy``
+
+- ``dates`` module:
+
+  - parse dates, supporting multiple formats
 
 - ``debug`` module:
 
@@ -62,6 +70,14 @@ Features
 
   - tools for sequences, e.g. ``inject_indexes``
 
+- ``sql`` module:
+
+  - functions for the generation of SQL statements, including
+    `insert`, `update`, `delete` and `select`.
+
+    The visaplan.zope.reldb_ package has a copy of this module which
+    uses the SQLAlchemy_ placeholders convention (``:name``).
+
 - ``times`` module:
 
   - functions related to date and/or time calculations
@@ -81,12 +97,10 @@ Simply install visaplan.tools by using pip::
 
     pip install visaplan.tools
 
-or by adding it to your buildout::
+or by adding it to your buildout_::
 
     [buildout]
-
     ...
-
     eggs =
         visaplan.tools
 
@@ -112,6 +126,9 @@ License
 
 The project is licensed under the GNU General Public License v2 (GPLv2).
 
+.. _buildout: https://pypi.org/project/zc.buildout
 .. _`issue tracker`: https://github.com/visaplan/visaplan.tools/issues
+.. _SQLAlchemy: https://www.sqlalchemy.org
+.. _visaplan.zope.reldb: https://pypi.org/project/visaplan.zope.reldb
 
 .. vim: tw=79 cc=+1 sw=4 sts=4 si et

@@ -2,8 +2,8 @@
 """\
 Very small functions
 """
-from __future__ import absolute_import
-from __future__ import print_function
+# Python compatibility:
+from __future__ import absolute_import, print_function
 
 from six import string_types as six_string_types
 
@@ -245,7 +245,7 @@ def check_kwargs(checked_kwargs, **my_kwargs):
     True
     >>> str(logger)
     "Unknown option 'unknown' found!"
-    
+
     It is quite common for the checked dictionary to be empty:
     >>> check_kwargs({})
     False
@@ -296,7 +296,7 @@ def check_kwargs(checked_kwargs, **my_kwargs):
     True
     >>> str(logger)
     "Unknown option 'bogus' found!"
-        
+
     But you can override the laxness from the checked dict and choose to be
     strict anyway:
     >>> check_kwargs({'pingelig': False, 'bogus': 42}, strict=True, **check_kw)
@@ -330,7 +330,7 @@ def check_kwargs(checked_kwargs, **my_kwargs):
     TypeError: Unknown option 'strict' found!
 
     """
-    # ssort-circuit check: if the given dict is empty, it can't contain unknown
+    # short-circuit check: if the given dict is empty, it can't contain unknown
     # keys. NOTE that in this case, the keyword arguments of the checking
     # function itself are not checked!  This is to avoid a recursion problem.
     if not checked_kwargs:
@@ -378,11 +378,12 @@ def check_kwargs(checked_kwargs, **my_kwargs):
             res = True
             if logger is not None:
                 # TODO: we might want to extract some information
-                #       from the stacktrace here ... 
+                #       from the stacktrace here ...
                 logger.warn('Unknown option %(key)r found!', locals())
     return res
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

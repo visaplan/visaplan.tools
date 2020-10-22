@@ -2,6 +2,7 @@
 """\
 Tools für Python-Dictionarys
 """
+# Python compatibility:
 from __future__ import absolute_import
 
 from six import string_types as six_string_types
@@ -9,16 +10,17 @@ from six.moves import filter
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
-# Standardmodule
+# Standard library:
 from collections import defaultdict
 from string import strip
 
+# visaplan:
 from visaplan.tools.minifuncs import NoneOrString
 
 __all__ = (
            'subdict',
            'subdict_onekey',
-           'subdict_forquery',
+           'subdict_forquery',  # see as well --> .sql.subdict_ne
            # Ergänzung von Schlüsseln:
            'make_key_injector',
            # Extraktion von Werten, mit Vorgabe und Factorys:
@@ -301,7 +303,12 @@ def update_dict(form, changes, deletions):
 
     Es wird erst gelöscht und dann "upgedatet"; ein Schlüssel aus <deletions>
     kann somit im Resultat durchaus vorhanden sein, wenn er in den
-    anzuwendenden <changes> enthalten ist!
+    anzuwendenden <changes> enthalten ist:
+
+    >>> dic1 = {'eins': 1, 'zwei': 2, 'drei': 3}
+    >>> update_dict(dic1, {'zwei': 22, 'vier': 44}, ['zwei', 'drei'])
+    >>> sorted(dic1.items())
+    [('eins', 1), ('vier', 44), ('zwei', 22)]
     """
     for key in deletions:
         if key in form:
@@ -411,5 +418,6 @@ def getOption(odict, key, default=None, factory=NoneOrString,
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

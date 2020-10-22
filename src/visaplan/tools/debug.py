@@ -4,12 +4,14 @@ visaplan.tools.debug - Helferlein für Entwicklung und Debugging
 
 Autor: Tobias Herp
 """
+# Python compatibility:
 from __future__ import absolute_import, print_function
 
 from six import string_types as six_string_types
 from six import text_type as six_text_type
 from six.moves import map
 
+# visaplan:
 from visaplan.tools.minifuncs import check_kwargs
 
 # ACHTUNG - Importe aus dem unitracc-Produkt stets incl. des
@@ -37,21 +39,23 @@ __all__ = [
            'log_result',
            # ------------------------ ] ... aus unitracc.tools.debug ]
            'has_strings',     # mit formatierter Ausgabe
-           # make_debugfile_writer  (requires some more love; see below) 
+           # make_debugfile_writer  (requires some more love; see below)
            ]
 
-# Standardmodule:
+# Standard library:
+from collections import defaultdict
 from functools import wraps
 from pprint import pformat, pprint
-from traceback import extract_stack
-from collections import defaultdict
 from time import sleep
+from traceback import extract_stack
 
 try:
+    # Logging / Debugging:
     from visaplan.plone.tools.log import getLogSupport
 except ImportError:
     getLogSupport = None
 try:
+    # visaplan:
     from visaplan.tools.minifuncs import gimme_False
 except ImportError:
     gimme_False = lambda: False
@@ -147,6 +151,7 @@ class log_or_trace(object):
             def trace_off(key=trace_key):
                 globals()['_TRACE_SWITCH'][key] = False
             globals()['_TRACE_SWITCH'][trace_key] = trace
+            # Logging / Debugging:
             from pdb import set_trace
 
             inner1 = func
@@ -249,7 +254,7 @@ def pretty_callstack(limit=3, revert=True, verbose=True):
     raw_info = extract_stack(limit=limit+1)
     res = []
     for tup in raw_info[:-1]:
-        filename, lineno, funcname = tup[:3] 
+        filename, lineno, funcname = tup[:3]
         if filename.endswith('.pyc'):
             filename = filename[:-1]
         res.append((funcname
@@ -282,12 +287,14 @@ def trace_this(func):
     NAME = func.__name__
     AFTERDARK = '... %s -->' % NAME
     LABEL = NAME + '('
+    # Standard library:
     from pprint import pprint
 
     @wraps(func)
     def inner(*args, **kwargs):
         label = [LABEL] + list(args)
         print(asciibox(label, kwargs=kwargs))
+        # Logging / Debugging:
         import pdb
         pdb.set_trace()  # --------- # @trace_this (sichtbarer Hinweis):
         res = func(*args, **kwargs)  # [s]tep into
@@ -603,6 +610,12 @@ def has_strings(haystack, *needles, **kwargs):
     True
     >>> liz
     ["'Vitaler Ne'...", '        v', " 6: 'aler Nebe'", " 8: 'er Nebel mit '", "36: 'en relati'"]
+
+    This function is designed to be used in the pdb b(reak) feature:
+    the optional 2nd argument is an expression which -- if evaluating to
+    True -- will trigger the break; therefore, the `has_strings`
+    function will either print nothing and return False, or print the
+    interesting information and return True.
     """
     pop = kwargs.pop
     before = max(pop('before', 20), 0)
@@ -664,7 +677,7 @@ def make_debugfile_writer(dirname, **kwargs):
     pop = kwargs.pop
     datemask = pop('datemask', '%a-%H%M%S')
     dirseg = strftime(datemask)
-    fulldir = path_join(dirname, dirseg) 
+    fulldir = path_join(dirname, dirseg)
     makedirs(fulldir)
     print('Creating files in directory %(fulldir)s'
           % locals())
@@ -692,6 +705,7 @@ def make_debugfile_writer(dirname, **kwargs):
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()
 
@@ -710,5 +724,5 @@ if __name__ == '__main__':
         b()
         print('\n'.join(pretty_callstack()))
         print('... Funktion c')
-    
+
     c()

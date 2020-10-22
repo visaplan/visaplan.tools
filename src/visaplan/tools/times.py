@@ -3,8 +3,11 @@
 Tools for time calculations
 """
 
+# Python compatibility:
 from __future__ import absolute_import
+
 from six.moves import map
+
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
            4,  # make_safe_decoder, now --> .coding
@@ -13,11 +16,11 @@ VERSION = (0,
 __version__ = '.'.join(map(str, VERSION))
 
 
-# Standardmodule
-from time import localtime, strftime, mktime, strptime
-from time import gmtime
+# Standard library:
 from calendar import timegm
+from time import gmtime, localtime, mktime, strftime, strptime
 
+# visaplan:
 from visaplan.tools.minifuncs import check_kwargs
 
 __all__ = [
@@ -158,5 +161,6 @@ def make_defaulttime_calculator(year=0, month=0, day=0,
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

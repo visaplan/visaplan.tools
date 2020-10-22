@@ -4,14 +4,18 @@ unitracc.tools.classes - kleine nützliche Hilfsklassen
 
 Autor: Tobias Herp
 """
+# Python compatibility:
 from __future__ import absolute_import
 
-from posixpath import normpath as normpath_posix
+# Standard library:
 from collections import Mapping
-from pdb import set_trace
+from posixpath import normpath as normpath_posix
 
+# visaplan:
 from visaplan.tools.minifuncs import check_kwargs
 
+# Logging / Debugging:
+from pdb import set_trace
 
 __all__ = [# dict-Klassen: Standardwert ...
            'Mirror',      # ... der Schlüssel (key)
@@ -1207,13 +1211,16 @@ class _Counter(dict):
             return 0
 
 try:
+    # Standard library:
     from collections import Counter
+
     # ... oder defaultdict(int)
 except ImportError:
     Counter = _Counter
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()
 

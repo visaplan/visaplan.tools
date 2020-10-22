@@ -2,10 +2,14 @@
 """\
 Tools for sequences
 """
+# Python compatibility:
 from __future__ import absolute_import
 
 from six import string_types as six_string_types
 from six.moves import map, range
+
+# Standard library:
+from string import strip
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
@@ -139,7 +143,7 @@ def next_of(top, current, step=1):
     return val
 
 
-def nonempty_lines(s):
+def nonempty_lines(s, func=strip):
     r"""
     Gib alle nicht-leeren Zeilen einer Zeichenkette zurück:
 
@@ -148,7 +152,7 @@ def nonempty_lines(s):
     ['eins', 'zwei drei']
     """
     for item in s.splitlines():
-        short = item.strip()
+        short = func(item)
         if short:
             yield short
 
@@ -405,5 +409,6 @@ def columns(seq, *args):
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

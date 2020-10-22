@@ -5,6 +5,7 @@ lands0 -- "lists and strings 0"
 Die Funktionen dieses Moduls haben mit Strings und Listen zu tun;
 ihre Namen, Signaturen etc. sind noch vorläufig
 """
+# Python compatibility:
 from __future__ import absolute_import
 
 from six import string_types as six_string_types
@@ -12,7 +13,7 @@ from six.moves import range
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
-# Standardmodule
+# Standard library:
 from string import strip
 
 __all__ = [
@@ -28,6 +29,7 @@ __all__ = [
            'makeSet',          # verdaut auch None usw.
            'groupstring',      # wie tomcom-Adapter groupstring
            'join_stripped',
+           'make_default_prefixer',
            # --------------- ] ... aus unitracc.tools.misc ]
            ]
 
@@ -296,7 +298,6 @@ def groupstring(s, size=2, cumulate=False):
         return [s[i:i + size]
                 for i in range(0, len(s), size)
                 ]
-# -------------------------- ] ... aus unitracc.tools.misc ]
 
 
 def join_stripped(dic, keys, joiner=' ', strict=True):
@@ -331,6 +332,58 @@ def join_stripped(dic, keys, joiner=' ', strict=True):
     return joiner.join(res)
 
 
+def make_default_prefixer(default_prefix, other_prefixes=None):
+    """
+    >>> prefixed = make_default_prefixer('a-', ['b-'])
+    >>> prefixed('X')
+    'a-X'
+    >>> prefixed('a-X')
+    'a-X'
+    >>> prefixed('b-X')
+    'b-X'
+
+    Anwendung für Migrationsschritte:
+    >>> safe_context_id = make_default_prefixer('profile-', ['snapshot-'])
+    >>> safe_context_id('Products.unitracc:default')
+    'profile-Products.unitracc:default'
+
+    Aus Performanzgründen wird ein multi_prefixer nur erzeugt,
+    wenn es wirlich nötig ist:
+
+    >>> prefixed.__name__
+    'multi_prefixer'
+    >>> make_default_prefixer('a-').__name__
+    'simple_prefixer'
+    >>> make_default_prefixer('a-', ['a-']).__name__
+    'simple_prefixer'
+    """
+
+    def simple_prefixer(s):
+        if s.startswith(default_prefix):
+            return s
+        return default_prefix + s
+
+    if other_prefixes:
+        a_p = [default_prefix]
+        for p in other_prefixes:
+            if p not in a_p:
+                a_p.append(p)
+        multi = bool(a_p[1:])
+    else:
+        multi = False
+
+    def multi_prefixer(s):
+        for p in a_p:
+            if s.startswith(p):
+                return s
+        return default_prefix + s
+
+    if multi:
+        return multi_prefixer
+    return simple_prefixer
+# -------------------------- ] ... aus unitracc.tools.misc ]
+
+
 if __name__ == '__main__':
     class MockRequest(dict):
         # kopiert ins mock-Modul
@@ -339,5 +392,6 @@ if __name__ == '__main__':
             self['ACTUAL_URL'] = kwargs.pop('actual_url', referer)
             self.form = kwargs
 
+    # Standard library:
     import doctest
     doctest.testmod()

@@ -3,13 +3,15 @@
 Tools zur Transformation von Datumswerten
 """
 
+# Python compatibility:
 from __future__ import absolute_import
+
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
 
-# Standardmodule
+# Standard library:
 from datetime import date
-from time import strptime, strftime
+from time import strftime, strptime
 
 __all__ = (
            'make_date_parser',
@@ -128,5 +130,6 @@ def make_date_formatter(context=None, **kwargs):
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

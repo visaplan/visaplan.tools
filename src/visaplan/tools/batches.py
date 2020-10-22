@@ -4,6 +4,7 @@ Support for batches: split sequences into batches of a given equal (maximum)
 size
 """
 
+# Python compatibility:
 from __future__ import absolute_import
 
 __all__ = [
@@ -129,5 +130,6 @@ def batch_tuples(seq, batch_size, **kwargs):
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

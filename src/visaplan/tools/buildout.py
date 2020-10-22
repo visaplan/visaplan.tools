@@ -7,12 +7,18 @@ For now, we support to check for whitelisted package versions
 but if you have it, you want to be sure to have a supported (whitelisted)
 version.
 """
+# Python compatibility:
 from __future__ import absolute_import
+
+# Standard library:
 import sys
 from os.path import normpath, sep
-from logging import getLogger
 
+# visaplan:
 from visaplan.tools.sequences import sequence_slide
+
+# Logging / Debugging:
+from logging import getLogger
 
 __all__ = [
     'checkPathForPackage',
@@ -186,7 +192,7 @@ def extract_package_and_version(spec, invalid=VALUES_INVALID[0], logger=None):
                     if logger is None:
                         logger = getLogger('extract_package_and_version')
                     logger.warn('Invalid top chunk: %(chunk)r (%(spec)r', locals())
-                    # next try with parent == 'eggs' 
+                    # next try with parent == 'eggs'
                     continue
                 if invalid == FAIL:
                     raise PackageExtractionError(**locals())
@@ -369,5 +375,6 @@ def checkPathForPackage(package, whitelist, path=None,
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

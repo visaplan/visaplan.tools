@@ -4,13 +4,16 @@
 # Die direkte Verwendung von htmlentitydefs.entitydefs ergibt leider nicht
 # zuverlässig das korrekte Unicode-Zeichen, z.B. im Falle von &nbsp;
 
+# Python compatibility:
 from __future__ import absolute_import
-from six.moves.html_entities import name2codepoint
-from string import whitespace
-from codecs import BOM_UTF8
-from six import unichr
-import six
 
+import six
+from six import unichr
+from six.moves.html_entities import name2codepoint
+
+# Standard library:
+from codecs import BOM_UTF8
+from string import whitespace
 
 __all__ = ('entity',  # ein HtmlEntityProxy
            'collapse_whitespace',
@@ -153,5 +156,6 @@ def _unicode_without_bom(s, charset='utf-8'):
 
 
 if __name__ == '__main__':
+    # Standard library:
     import doctest
     doctest.testmod()

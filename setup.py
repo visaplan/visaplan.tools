@@ -165,5 +165,9 @@ setup_kwargs = dict(
         'setuptools',
         'six',
     ],
+    entry_points="""
+    [z3c.autoinclude.plugin]
+    target = plone
+    """,
 )
 setup(**setup_kwargs)

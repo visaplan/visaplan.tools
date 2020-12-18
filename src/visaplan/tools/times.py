@@ -20,7 +20,7 @@ __version__ = '.'.join(map(str, VERSION))
 from calendar import timegm
 from time import gmtime, localtime, mktime, strftime, strptime
 
-# visaplan:
+# Local imports:
 from visaplan.tools.minifuncs import check_kwargs
 
 __all__ = [

@@ -14,7 +14,7 @@ from __future__ import absolute_import
 import sys
 from os.path import normpath, sep
 
-# visaplan:
+# Local imports:
 from visaplan.tools.sequences import sequence_slide
 
 # Logging / Debugging:
@@ -323,8 +323,8 @@ def checkPathForPackage(package, whitelist, path=None,
     >>> logger[-1:]
     [('WARN', 'Invalid entry: /complete/nonsense')]
 
-    There is no such message for Products.ATContentTypes because in the end the
-    package and version had been found:
+    In our example above, there is no such message for Products.ATContentTypes
+    because in the end the package and version had been found:
     >>> not [(lvl, txt)
     ...      for (lvl, txt) in logger
     ...      if txt.startswith('Invalid entry')

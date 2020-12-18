@@ -11,8 +11,34 @@ Changelog
     ``dicts.update_dict``.
 
 
-1.3.1 (unreleased)
+1.3.1 (2020-12-16)
 ------------------
+
+Breaking changes:
+
+- ``.lands0.list_of_strings`` now *does* split strings by default:
+
+  - like for the `str.split` method (which is used internally),
+    a `None` split character
+    causes the argument to be split using any whitespace
+
+  - to suppress splitting, you may now specify `splitfunc=False`
+    which will imply the value to be *stripped*, at least ...
+
+  - ... unless `splitchar=False` is given as well.
+
+Bugfixes:
+
+- ``.lands0.list_of_strings`` didn't split strings by default ...
+  
+  (You didn't *rely* on this bug, did you?!)
+
+New Features:
+
+- New class `.dicts.ChangesCollector`;
+  allows to collect additions *to* and deletions *from* lists (see doctests).
+  If collections-extended_ is installed, the `setlist` class is used,
+  an "ordered set".
 
 Improvements:
 
@@ -220,5 +246,6 @@ New Features:
 - Initial release, including modules ``classes``, ``html``, ``http`` and ``coding``
   [tobiasherp]
 
+.. _collections-extended: https://pypi.org/project/collections-extended
 .. _six: https://pypi.org/project/six
 .. _visaplan.plone.sqlwrapper: https://pypi.org/project/visaplan.plone.sqlwrapper

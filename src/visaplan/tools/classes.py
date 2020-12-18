@@ -1,21 +1,39 @@
 # -*- coding: utf-8 -*-
 """
-unitracc.tools.classes - kleine nützliche Hilfsklassen
+visaplan.tools.classes - kleine nützliche Hilfsklassen
 
 Autor: Tobias Herp
 """
 # Python compatibility:
 from __future__ import absolute_import
 
+from six import string_types as six_string_types
+
+# Setup tools:
+import pkg_resources
+
 # Standard library:
 from collections import Mapping
 from posixpath import normpath as normpath_posix
 
-# visaplan:
+# Local imports:
 from visaplan.tools.minifuncs import check_kwargs
 
 # Logging / Debugging:
 from pdb import set_trace
+
+try:
+    pkg_resources.get_distribution('collections-extended')
+except pkg_resources.DistributionNotFound:
+    HAVE_SETLIST = False
+    bestset = set
+    # print('Sorry, no setlist (ordered set) available')
+else:
+    # 3rd party:
+    from collections_extended import setlist
+    bestset = setlist
+    # print('Yes, we have collections_extended.setlist!')
+    HAVE_SETLIST = True
 
 __all__ = [# dict-Klassen: Standardwert ...
            'Mirror',      # ... der Schlüssel (key)
@@ -25,6 +43,7 @@ __all__ = [# dict-Klassen: Standardwert ...
            'DictOfSets',  # z. B. für Workflow
            'RootsDict',   # ... speziell für Pfade
            'Once',
+           'ChangesCollector',
            # ..., Schreiboperationen
            'AliasDict',
            'WriteProtected',
@@ -1010,7 +1029,7 @@ class StackOfDicts(Mapping):
                 else:
                     if maybe_check:
                         if isinstance(arg, dict):
-                            found_keys.update(arg.keys())
+                            found_keys.update(arg.keys())  # noqa
                         else:
                             found_keys.update([t[0] for t in arg])
                     if factory is None:
@@ -1068,7 +1087,7 @@ class StackOfDicts(Mapping):
             dic = factory(dic)
         if self._checked:
             allowed = self._allowed_keys
-            if not allowed.issuperset(dic.keys()):
+            if not allowed.issuperset(dic.keys()):  # noqa
                 disallowed = ', '.join(sorted(set(dic.keys()).difference(allowed)))
                 raise ValueError('The given dictionary contains disallowed'
                         ' keys! (%(disallowed)s)' % locals())
@@ -1191,6 +1210,167 @@ class UniqueStack(list):
         a = self.append
         for item in seq:
             a(item)
+
+
+class ChangesCollector(dict):
+    """
+    Where the .dicts.update_dict function allows to change or remove values for
+    immediate keys of the given dictionary, this class allows to add or remove
+    values from list which are values of the dictionary keys.
+    Such changes can then be cumulated, and finally the .frozen methode
+    can return a dictionary which contains the collected changes, suitable for
+    the .update method of another dictionary.
+
+    >>> orig = {'whitelist': ['body', 'img']}
+    >>> chg1 = ChangesCollector({'whitelist': {'add': ['p'],
+    ...                                        'remove': ['div', 'img']}})
+    >>> chg2 = ChangesCollector({'whitelist': {'add': ['div'],
+    ...                                        'remove': ['strong', 'img']}})
+    >>> chg1.update(chg2)
+    >>> sorted(chg1.frozen(orig).items())
+    [('whitelist', ['body', 'p', 'div'])]
+
+    We expect all keys to be strings:
+    >>> ChangesCollector({42: 'The answer'})
+    Traceback (most recent call last):
+      ...
+    ValueError: All keys are expected to be strings; got 42!
+
+    See as well --> .dicts.update_dict
+    """
+
+    specialkeys = frozenset(['add', 'remove'])
+
+    def __init__(self, dic):
+        dict.__init__(self)
+        self._magic = {}
+        for key, val in dic.items():
+            self.__setitem__(key, val)
+
+    @classmethod
+    def is_special_dict(cls, dic, strict=True):
+        """
+        Is the given thingy a dict with the known special keys?
+        """
+        if not isinstance(dic, dict):
+            return False
+        thekeys = set(dic.keys())
+        if not thekeys:
+            return None
+        if thekeys <= cls.specialkeys:
+            return True
+        elif not thekeys.intersection(cls.specialkeys):
+            return False
+        elif strict:
+            raise ValueError('Found a mixture of special and non-special keys!'
+                             ' (%(thekeys)s)'
+                             % locals())
+        else:
+            return False
+
+    def __setitem__(self, key, val):
+        """
+        Set a value, and detect it's "magicness".
+
+        For "magic" values, the special subvalues are stored as sets or,
+        if collections-extended is installed, as setlists (ordered sets)
+        """
+        if not isinstance(key, six_string_types):
+            raise ValueError('All keys are expected to be strings; '
+                             'got %(key)r!'
+                             % locals())
+        self._magic[key] = magic = self.__class__.is_special_dict(val)
+        if magic:
+            newval = {}
+            for subkey in self.__class__.specialkeys:
+                newval[subkey] = bestset(val.get(subkey, []))
+            dict.__setitem__(self, key, newval)
+        else:
+            dict.__setitem__(self, key, val)
+
+    def update(self, other, polite=True):
+        """
+        Update from another ChangesCollector, evaluating the special
+        dictionary keys
+        """
+        if not isinstance(other, self.__class__):
+            raise ValueError('Expected another ChangesCollector; '
+                             ' got %(other)r'
+                             % locals())
+        my_magic = self._magic
+        other_magic = other._magic
+        for key, o_val in other.items():
+            if other_magic[key]:
+                if key not in self:
+                    self[key] = o_val.copy()
+                    my_magic[key] = True
+                    continue
+                my_magicness_value = my_magic[key]
+                my_val = self[key]
+                if my_magicness_value is None:
+                    # an empty dict would be ok:
+                    if not isinstance(my_val, dict):
+                        raise ValueError('key %(key)r is special in other '
+                                'ChangesCollector but a non-dict here!'
+                                % locals())
+                    elif my_val:
+                        raise ValueError('key %(key)r is special in other '
+                                'ChangesCollector but contains'
+                                ' non-special keys here!'
+                                % locals())
+                    else:  # an empty dict:
+                        my_val['add'] = my_additions = bestset()
+                        my_val['remove'] = my_deletions = bestset()
+                elif not my_magicness_value:
+                    raise ValueError('key %(key)r is special in other '
+                            'ChangesCollector but non-magic here!'
+                            % locals())
+                else:
+                    my_additions = my_val['add']
+                    my_deletions = my_val['remove']
+
+                other_additions = o_val.get('add', [])
+                my_additions.update(other_additions)
+
+                # apply the addttions first:
+                for val in other_additions:
+                    my_additions.add(val)
+                    my_deletions.discard(val)
+                # ... and now the deletions:
+                other_deletions = o_val.get('remove', [])
+                for val in other_deletions:
+                    my_deletions.add(val)
+                    my_additions.discard(val)
+
+    def frozen(self, thedict, strict=1):
+        """
+        After cumulating several changes from ChangesCollector objects
+        (via the update method), return an ordinary dict which can the thrown
+        to the ordinary dict.update method.
+        """
+        res = {}
+        my_magic = self._magic
+        for key, my_val in self.items():
+            missing = key not in thedict
+            if missing and strict:
+                raise ValueError('We have changes here for a key %(key)r '
+                                 'which is not present in the reference dict!')
+            if my_magic[key]:
+                if missing:
+                    other_val = bestset()
+                else:
+                    raw_val = thedict[key]
+                    if isinstance(raw_val, six_string_types):
+                        raise ValueError('We have changes here for a key %(key)r '
+                                         'which is a string in the reference dict!')
+                    other_val = bestset(raw_val)
+                other_val.update(my_val['add'])
+                # standard set doesn't have discard_all, so we need to loop:
+                for val in my_val['remove']:
+                    other_val.discard(val)
+                my_val = list(other_val)
+            res[key] = my_val
+        return res
 
 
 # ab Python 2.7: collections.Counter

@@ -14,7 +14,7 @@ __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 from collections import defaultdict
 from string import strip
 
-# visaplan:
+# Local imports:
 from visaplan.tools.minifuncs import NoneOrString
 
 __all__ = (
@@ -309,6 +309,8 @@ def update_dict(form, changes, deletions):
     >>> update_dict(dic1, {'zwei': 22, 'vier': 44}, ['zwei', 'drei'])
     >>> sorted(dic1.items())
     [('eins', 1), ('vier', 44), ('zwei', 22)]
+
+    See as well --> .classes.ChangesCollector
     """
     for key in deletions:
         if key in form:

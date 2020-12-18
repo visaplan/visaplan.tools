@@ -40,7 +40,7 @@ from __future__ import absolute_import, print_function
 from functools import wraps
 from time import time
 
-# visaplan:
+# Local imports:
 from visaplan.tools.classes import Proxy
 
 # Daten:

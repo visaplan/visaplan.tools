@@ -11,7 +11,7 @@ from six import string_types as six_string_types
 from six import text_type as six_text_type
 from six.moves import map
 
-# visaplan:
+# Local imports:
 from visaplan.tools.minifuncs import check_kwargs
 
 # ACHTUNG - Importe aus dem unitracc-Produkt stets incl. des
@@ -55,7 +55,7 @@ try:
 except ImportError:
     getLogSupport = None
 try:
-    # visaplan:
+    # Local imports:
     from visaplan.tools.minifuncs import gimme_False
 except ImportError:
     gimme_False = lambda: False

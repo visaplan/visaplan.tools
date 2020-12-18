@@ -47,6 +47,29 @@ def list_of_strings(val, splitchar=None, splitfunc=None):
     >>> list_of_strings('abc')
     ['abc']
 
+    Im einfachsten Fall wird die Zeichenkette wortweise aufgesplittet:
+    >>> list_of_strings(' eins  zwei ')
+    ['eins', 'zwei']
+    >>> list_of_strings('  ')
+    []
+
+    Wird ein "falscher" Wert (außer dem Vorgabewert None) als splitfunc
+    übergeben, dann wird zumindest strip angewendet
+    (was bei split impliziert ist):
+
+    >>> list_of_strings(' eins  zwei ', splitfunc=False)
+    ['eins  zwei']
+    >>> list_of_strings('  ', splitfunc=False)
+    []
+
+    ... es sei denn, auch splitchar ist "falsch":
+    >>> list_of_strings(' eins  zwei ', splitfunc=False, splitchar=False)
+    [' eins  zwei ']
+    >>> list_of_strings('  ', splitfunc=False, splitchar=False)
+    ['  ']
+    >>> list_of_strings('', splitfunc=False, splitchar=False)
+    []
+
     Tupel werden zu Listen konvertiert, Sets dabei sortiert;
     None ergibt eine leere Liste;
     Listen werden direkt zurückgegeben:
@@ -81,10 +104,19 @@ def list_of_strings(val, splitchar=None, splitfunc=None):
         return list_of_strings(list(val))
 
     if splitfunc is None:
+        # splitchar=None is documented to use any whitespace:
+        return val.split(splitchar)
+    elif not splitfunc:
         if splitchar is None:
+            val = val.strip()
+        elif not splitchar:
+            pass
+        else:
+            val = val.strip(splitchar)
+        if val:
             return [val]
         else:
-            return val.split(splitchar)
+            return []
     elif splitchar is None:
         return splitfunc(val)
     else:

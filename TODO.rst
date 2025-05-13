@@ -23,5 +23,8 @@ Bugs to be fixed:
 
 Other things to do:
 
+- In the .buildout module, use importlib-metadata_!
 - Turn the information above in a nice table
+
+.. _importlib-metadata: https://pypi.org/project/importlib-metadata/
 

@@ -20,6 +20,11 @@ from visaplan.tools.sequences import sequence_slide
 # Logging / Debugging:
 from logging import getLogger
 
+# backport for Python 3.7- (from PyPI);
+# Python compatibility:
+from importlib_metadata import PackageNotFoundError
+from importlib_metadata import version as pkg_version
+
 __all__ = [
     'checkPathForPackage',
     # Constants:
@@ -84,6 +89,13 @@ class PackageNotFound(InstalledPackageError):
                file="..."
     </configure>
     """
+
+
+if 1:
+    # This exception class is used *only* if importlib is used and fails
+    # to find the given package:
+    class PackageNotFound2(PackageNotFound, PackageNotFoundError):
+        """Package %(package)s not found"""
 
 
 class InvalidPathEntry(InstalledPackageError):
@@ -230,9 +242,10 @@ def checkPathForPackage(package, whitelist, path=None,
         missing=VALUES_MISSING[0],
         noversion=VALUES_NOVERSION[0],
         mismatching=VALUES_MISMATCHING[0],
-        invalid=VALUES_INVALID[0],
+        invalid=VALUES_INVALID[1],
         logger=None,
-        extract=extract_package_and_version):
+        extract=extract_package_and_version,
+        **kwargs):
     """
     Check the path entries for the given package;
     if found, and if the found version is in the whitelist,
@@ -269,6 +282,11 @@ def checkPathForPackage(package, whitelist, path=None,
       package     the package name
       whitelist   a comma-separated string, or list, or tuple
       path        (for testing only)
+                  defaults to sys.path, unless importlib is used
+                  (see below).
+
+    Please specify as named arguments; will likely be enforced by a
+    Python-3-only version:
 
       missing     action for not installed package,
                   or if develepent package found but disallowed
@@ -276,11 +294,19 @@ def checkPathForPackage(package, whitelist, path=None,
                   a warning is logged; in any case, 'devel' is returned
       mismatching by default (FAIL), an exception is raised if a
                   non-whitelisted package version is found
-      invalid     action for unexpected sys.path entries, by default: FAIL
+      invalid     action for unexpected sys.path entries, by default: WARN
       logger      anything which sports a "warn" method
       extract     a function which takes a (buildout-created) sys.path entry
                   and returns a (package, version) tuple
                   (see extract_package_and_version for the signature)
+
+    (keyword-only:)
+
+      use_importlib
+                  boolean; whether to use importlib functionality to find the
+                  version of the given installed package.
+                  Defaults to True if importlib.metadata (or the backport,
+                  importlib_metadata) is at hand and `path` is not specified.
 
     >>> from visaplan.tools.mock import MockLogger
     >>> logger = MockLogger()
@@ -321,7 +347,7 @@ def checkPathForPackage(package, whitelist, path=None,
     >>> cpfp('missing.package', path=samplepath, missing=RETURN)
     False
     >>> logger[-1:]
-    [('WARN', 'Invalid entry: /complete/nonsense')]
+    [('WARN', "Unexpected path entry '/complete/nonsense'")]
 
     In our example above, there is no such message for Products.ATContentTypes
     because in the end the package and version had been found:
@@ -333,7 +359,25 @@ def checkPathForPackage(package, whitelist, path=None,
     True
     """
     if path is None:
+        use_importlib = kwargs.pop('use_importlib', 1)
+    else:
+        use_importlib = kwargs.pop('use_importlib', 0)
+        if use_importlib:
+            raise TypeError('With use_importlib = %(use_importlib)r, '
+                            'the given path won\'t be used!'
+                            % locals())
+
+    if not use_importlib and path is None:
         path = sys.path
+
+    if kwargs:
+        invalid = list(kwargs.keys())
+        first = invalid[0]
+        more = (' (...)' if invalid[1:]
+                else '')
+        raise TypeError('Unsupported keyword argument(s) (%(first)s%(more)s!'
+                        % locals())
+
     if not isinstance(whitelist, (list, tuple)):
         whitelist = [v.strip()
                      for v in whitelist.split(',')
@@ -341,6 +385,32 @@ def checkPathForPackage(package, whitelist, path=None,
     check_illegal_choice(missing,     'missing',     VALUES_MISSING)
     check_illegal_choice(noversion,   'noversion',   VALUES_NOVERSION)
     check_illegal_choice(mismatching, 'mismatching', VALUES_MISMATCHING)
+
+    if use_importlib:
+        try:
+            version = pkg_version(package)
+        except PackageNotFoundError as e:
+            if missing == FAIL:
+                raise PackageNotFound2(**locals())
+            return False
+        else:
+            if version in whitelist:
+                return True
+            elif version:
+                if mismatching == FAIL:
+                    raise UnsupportedVersion(**locals())
+                else:
+                    return False
+            else:
+                # FINDOUT / TODO: what does importlib.metadata.version() return
+                #                 for development packages?
+                if noversion == WARN:
+                    if logger is None:
+                        logger = getLogger('checkPathForPackage')
+                    logger.warn('Using development package for %(package)s',
+                                locals())
+                return 'devel'
+
     bogus_paths = []
     for pa in path:
         try:

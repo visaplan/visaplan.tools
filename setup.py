@@ -172,6 +172,7 @@ setup_kwargs = dict(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'importlib_metadata',
         'six',
     ],
 )

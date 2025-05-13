@@ -7,10 +7,9 @@ Autor: Tobias Herp
 # Python compatibility:
 from __future__ import absolute_import
 
+from importlib_metadata import PackageNotFoundError
+from importlib_metadata import version as pkg_version
 from six import string_types as six_string_types
-
-# Setup tools:
-import pkg_resources
 
 # Standard library:
 from collections import Mapping
@@ -23,8 +22,8 @@ from visaplan.tools.minifuncs import check_kwargs
 from pdb import set_trace
 
 try:
-    pkg_resources.get_distribution('collections-extended')
-except pkg_resources.DistributionNotFound:
+    pkg_version('collections-extended')
+except PackageNotFoundError:
     HAVE_SETLIST = False
     bestset = set
     # print('Sorry, no setlist (ordered set) available')

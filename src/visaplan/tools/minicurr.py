@@ -19,13 +19,14 @@ __all__ = [
     ]
 
 try:
+    # Local imports:
     from .classes import Mirror
 except (ImportError, ValueError):
     if __name__ == '__main__':
         Mirror = dict
     else:
         raise
-	
+
 _Aliases = {
     'EUR': [u'€', 'Euro', 'euro'],
     'JPY': [u'¥', 'yen', 'Yen', 'YEN'],

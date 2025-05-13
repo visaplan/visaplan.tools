@@ -4,14 +4,13 @@
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
+from importlib_metadata import PackageNotFoundError
+from importlib_metadata import version as pkg_version
 from six.moves.urllib.parse import urlsplit, urlunsplit
 
-# Setup tools:
-import pkg_resources
-
 try:
-    pkg_resources.get_distribution('zope.deprecation')
-except pkg_resources.DistributionNotFound:
+    pkg_version('zope.deprecation')
+except PackageNotFoundError:
     if __name__ != '__main__':
         raise
     HAS_ZOPEDEPRECATION = False

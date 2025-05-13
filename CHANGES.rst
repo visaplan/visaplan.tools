@@ -13,6 +13,29 @@ Breaking changes:
   - ``make_url``
 
 
+1.3.12 (2023-05-02)
+-------------------
+
+Improvements:
+
+- .buildout.checkPathForPackage:
+
+  - Changed the default for `invalid` (path entries) to `WARN`,
+    because we got wrong exceptions for not-found packages.
+
+  - Since we require importlib-metadata_ now,
+    .buildout.checkPathForPackage doesn't
+    scan the `sys.path` for the given package anymore
+    (unless given as `path` or requested by `use_importlib=False`)
+    but tries importlib_metadata.version().
+
+Requirements:
+
+- importlib_metadata_
+
+[tobiasherp]
+
+
 1.3.11 (2023-03-21)
 -------------------
 
@@ -255,7 +278,7 @@ New Features:
 
 Requirements:
 
-- six_ module, for Python 3 compatibility
+- six_ module, for Python_ 3 compatibility
 
 [tobiasherp]
 
@@ -413,7 +436,9 @@ New Features:
   [tobiasherp]
 
 .. _collections-extended: https://pypi.org/project/collections-extended
+.. _importlib_metadata: https://pypi.org/project/importlib-metadata/
 .. _`ISO 4217`: https://www.iso.org/iso-4217-currency-codes.html
+.. _Python: https://www.python.org
 .. _six: https://pypi.org/project/six
 .. _visaplan.plone.sqlwrapper: https://pypi.org/project/visaplan.plone.sqlwrapper
 .. _zope.deprecation: https://pypi.org/project/zope.deprecation

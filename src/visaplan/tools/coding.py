@@ -6,7 +6,6 @@ Coding/Decoding tools
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-import six
 from six import text_type as six_text_type
 from six.moves import map
 

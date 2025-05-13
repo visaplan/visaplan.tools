@@ -1,19 +1,89 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*- vim: ts=8 sts=4 sw=4 si et tw=79
+r"""
+visaplan.tools.html: classes, functions and data for HTML support
 
-# Die direkte Verwendung von htmlentitydefs.entitydefs ergibt leider nicht
-# zuverlässig das korrekte Unicode-Zeichen, z.B. im Falle von &nbsp;
+The `entity` object -- an `HtmlEntityProxy` instance -- resolves mnemonic entity
+names to Unicode characters::
+
+    >>> entity['uuml']
+    u'\xfc'
+    >>> print(entity['uuml'])  # doctest: +SKIP
+    ...                        #          (because of normalization problem)
+    ü
+
+The `entity_aware` function generates the characters in a string which contains
+entities, like e.g. returned by the lxml parser::
+
+    >>> list(entity_aware('e.&thinsp;g.'))
+    ['e', '.', '&thinsp;', 'g', '.']
+
+It tries to handle multi-byte characters correctly::
+
+    >>> list(entity_aware('Au&#195;&#159;en'))
+    ['A', 'u', '&#195;&#159;', 'e', 'n']
+
+It doesn't currently care about percent-encoded URIs; we don't consider it
+likely someone needs a "head" of them::
+
+    >>> list(entity_aware('%20'))
+    ['%', '2', '0']
+
+The make_picture function helps to create HTML picture elements (or, mostly: img
+elements with srcset attributes) for simple standard cases::
+
+    >>> kw = {'prefix': '/++images++/',
+    ...       'source_mask': 'babyface-%(width)d.jpg',
+    ...       'joiner': ' '}  # allow for whitespace normalization
+    >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
+    '<img srcset="/++images++/babyface-300.jpg 300w,
+                  /++images++/babyface-600.jpg 600w"
+          src="/++images++/babyface-300.jpg"
+          alt="">'
+
+The from_plain_text function converts simple text/plain strings to HTML,
+supporting paragraphs and unordered lists:
+
+    >>> plain = (u'''
+    ... %(bull)s foo
+    ... %(bull)s bar
+    ...
+    ... And now for something completely different %(hellip)s'''
+    ... ) % entity
+    >>> print(plain.encode('utf-8'))
+    <BLANKLINE>
+    • foo
+    • bar
+    <BLANKLINE>
+    And now for something completely different …
+    >>> from_plain_text(plain,
+    ...                joiner=u' ')  # doctest: +NORMALIZE_WHITESPACE
+    u'<ul> <li> foo <li> bar
+     </ul>
+      <p> And now for something completely different \u2026'
+
+    >>> from_plain_text(u'''
+    ... %(bull)s foo
+    ... %(bull)s bar
+    ...
+    ... And now for something completely different %(hellip)s'''
+    ... % entity, joiner=u' ')  # doctest: +NORMALIZE_WHITESPACE
+    u'<ul> <li> foo <li> bar
+     </ul>
+      <p> And now for something completely different \u2026'
+
+"""
 
 # Python compatibility:
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import six
 from six import text_type as six_text_type
 from six import unichr
 from six.moves.html_entities import name2codepoint
 
-# Local imports:
-from visaplan.tools.sequences import sequence_slide
+# Standard library:
+from codecs import BOM_UTF8
+from string import whitespace
 
 try:
     # Standard library:
@@ -24,17 +94,20 @@ except ImportError:
     def html_escape(s):
         return cgi_escape(s, quote=1)
 
-# Standard library:
-from codecs import BOM_UTF8
-from string import whitespace
+# Local imports:
+from visaplan.tools._builder import from_plain_text
+from visaplan.tools.sequences import sequence_slide
 
-__all__ = ('entity',  # ein HtmlEntityProxy
-           'collapse_whitespace',
-           'make_picture',
-           )
+__all__ = [
+    'entity',  # an --> HtmlEntityProxy
+    'entity_aware',
+    'make_picture',
+    'from_plain_text',
+    ## caution; not stable yet, regarding breaking vs. non-breaking space:
+    # 'collapse_whitespace',
+    ]
 
 # ------------------------------------------------------ [ Daten ... [
-
 # Blockelemente: hier als solche Elemente verstanden, die in einem <p>, <span>
 # oder <a> nicht vorkommen dürfen
 BLOCK_ELEMENT_NAMES = set([
@@ -53,8 +126,22 @@ EMPTY_ELEMENT_NAMES = set([
 REPLACED_ELEMENT_NAMES = set([
      'hr', 'img', 'br',
      ])
-# Da gäbe es noch mehr; erstmal der ständig verwendete Kandidat:
-WHITESPACE_ENTITY_NAMES = ['nbsp']
+WHITESPACE = set(six_text_type(whitespace))  # see additions below!
+WHITESPACE_ENTITY_NAMES = [
+        'nbsp',    # the most important one; universally supported
+        'thinsp',  # &#8201; (breaking; not recommended)
+        # narrow non-breaking space: &#8239;
+        ]
+
+_ENTITY_CHARS = {
+        '&':   frozenset('abcdefghijklmnopqrstuvwxyz'
+                         'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                         '0123456789_'),
+        '&#':  frozenset('0123456789'),
+        '&#x': frozenset('0123456789'
+                         'abcdef'
+                         'ABCDEF'),
+        }
 # ------------------------------------------------------ ] ... Daten ]
 
 class HtmlEntityProxy(dict):
@@ -85,11 +172,136 @@ class HtmlEntityProxy(dict):
 
 
 entity = HtmlEntityProxy()
-WHITESPACE = set(six_text_type(whitespace))
-# print sorted(WHITESPACE)
 for entity_name in WHITESPACE_ENTITY_NAMES:
     WHITESPACE.add(entity[entity_name])
-# print sorted(WHITESPACE)
+
+
+def entity_aware(s):
+    """
+    Generate the characters of a string, counting character entities as one.
+
+    >>> list(entity_aware('S&P'))
+    ['S', '&', 'P']
+    >>> list(entity_aware('S&amp;P'))
+    ['S', '&amp;', 'P']
+    >>> list(entity_aware('z.&nbsp;B.'))
+    ['z', '.', '&nbsp;', 'B', '.']
+
+    The '&#195;' entity is special:
+    >>> list(entity_aware('Au&#195;&#159;en'))
+    ['A', 'u', '&#195;&#159;', 'e', 'n']
+
+    However, if normal text follows -- who are we to judge?
+    >>> list(entity_aware('&#195;'))
+    ['&#195;']
+    >>> list(entity_aware('&#195;a'))
+    ['&#195;', 'a']
+    >>> list(entity_aware('&#195;&'))
+    ['&#195;', '&']
+
+    The special entity is never followed by named entities;
+    in such cases, both are yielded separately:
+    >>> list(entity_aware('&#195;&amp;'))
+    ['&#195;', '&amp;']
+
+    Empty entities are deconstructed:
+    >>> list(entity_aware('&#;&;'))
+    ['&', '#', ';', '&', ';']
+    >>> list(entity_aware('&&'))
+    ['&', '&']
+
+    """
+    buf = []
+
+    v = {
+        'entity_prefix': None,
+        'onshelf': None,
+        'in_entity': 0,
+        }
+
+    def flush(ch=None):
+        if v['onshelf'] is not None:
+            yield v['onshelf']
+            v['onshelf'] = None
+
+        prefix = v['entity_prefix']
+        if prefix is not None:
+            for lch in prefix:
+                yield lch
+            v['entity_prefix'] = None
+        elif v['in_entity']:
+            yield '&'
+
+        for lch in buf:
+            yield lch
+        del buf[:]
+        if ch is not None:
+            yield ch
+        v['in_entity'] = 0
+
+    def complete_entity(ch):
+        assert v['entity_prefix']
+        assert v['in_entity']
+        assert buf
+        ent = v['entity_prefix'] + ''.join(buf) + ch
+        del buf[:]
+        v['entity_prefix'] = None
+        v['in_entity'] = 0
+        return ent
+
+    for ch in s:
+        if ch == '&':
+            if v['onshelf'] is None:
+                for item in flush():
+                    yield item
+            v['in_entity'] = 1
+        elif buf:
+            assert v['in_entity']
+            assert v['entity_prefix']
+            if ch == ';':
+                ent = complete_entity(ch)
+                if v['onshelf'] is not None:
+                    yield v['onshelf'] + ent
+                    v['onshelf'] = None
+                elif ent == '&#195;':
+                    v['onshelf'] = ent
+                    continue
+                else:
+                    for item in flush(ent):
+                        yield item
+            elif ch in _ENTITY_CHARS[v['entity_prefix']]:
+                buf.append(ch)
+            else:
+                # not a valid entity!
+                for item in flush():
+                    yield item
+                if ch == '&':
+                    v['in_entity'] = 1
+                else:
+                    yield ch
+        elif v['entity_prefix'] is not None:
+            if ch in _ENTITY_CHARS[v['entity_prefix']]:
+                buf.append(ch)
+            else:
+                for item in flush(ch):
+                    yield item
+        elif v['in_entity']:  # we had found a '&'
+            if ch == '#':
+                v['entity_prefix'] = '&'+ch
+            elif ch in _ENTITY_CHARS['&']:
+                if v['onshelf'] is not None:
+                    yield v['onshelf']
+                    v['onshelf'] = None
+                v['entity_prefix'] = '&'
+                buf.append(ch)
+            else:
+                for item in flush(ch):
+                    yield item
+        else:
+            for item in flush(ch):
+                yield item
+    for item in flush():
+        yield item
 
 
 def collapse_whitespace(s, preserve_edge=True):
@@ -546,6 +758,12 @@ def _pop_two_joiners(dic):
 
 
 if __name__ == '__main__':
+  if 0:
+      from pdb import set_trace; set_trace()
+      generator = entity_aware('Au&#195;&#159;en')
+      res = list(generator)
+      print(res)
+  else:
     # Standard library:
     import doctest
     doctest.testmod()

@@ -24,6 +24,27 @@ Breaking changes:
 [tobiasherp]
 
 
+1.3.7 (2021-10-27)
+------------------
+
+New Features:
+
+- ``.html`` module:
+
+  - new function `from_plain_text`
+  - new character generator `entity_aware`
+
+- ``.words`` module:
+
+  - New options for `head`:
+
+    - `detect_entities` (using ``.html.entity_aware``)
+    - `max_fuzz`
+    - `return_tuple`
+
+[tobiasherp]
+
+
 1.3.6 (2021-10-06)
 ------------------
 

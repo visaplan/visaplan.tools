@@ -272,6 +272,8 @@ def list_of_strings(val, splitchar=None, splitfunc=None):
     ['eins', 'zwei']
     >>> list_of_strings('  ')
     []
+    >>> list_of_strings(' all\n')
+    ['all']
 
     Wird ein "falscher" Wert (außer dem Vorgabewert None) als splitfunc
     übergeben, dann wird zumindest strip angewendet

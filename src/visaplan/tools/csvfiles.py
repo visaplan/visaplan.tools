@@ -7,7 +7,10 @@ CSV support: create Excel(tm)-compatible CSV files (semicolon, UTF-8)
 from __future__ import absolute_import
 
 # Standard library:
+import csv
 import sys
+from codecs import BOM_UTF8
+
 if sys.version_info > (3,):
    # Standard library:
    from io.StringIO import StringIO
@@ -15,9 +18,6 @@ else:
    # Standard library (Python 2):
    from StringIO import StringIO
 
-# Standard library:
-import csv
-from codecs import BOM_UTF8
 
 __all__ = ['ExcelSSV',  # Excel+ssv (semicolon-separated values)
            'csv_writer',

@@ -4,13 +4,14 @@ words - split strings into words
 """
 
 # Python compatibility:
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import six
 from six import string_types as six_string_types
 from six import text_type as six_text_type
 
 # Local imports:
+from visaplan.tools.html import entity_aware
 from visaplan.tools.sequences import sequence_slide
 
 __all__ = [
@@ -28,16 +29,66 @@ def _head_kwargs(kw):
     >>> def _hkw(**dic):
     ...     _head_kwargs(dic)
     ...     return sorted(dic.items())
-    >>> _hkw(chars=50)	# doctest: +NORMALIZE_WHITESPACE
-    [('chars', 50), ('ellipsis', '...'), ('fuzz', 5), ('strip', True), ('words', None)]
-    >>> _hkw(chars=50, fuzz=2)	# doctest: +NORMALIZE_WHITESPACE
-    [('chars', 50), ('ellipsis', '...'), ('fuzz', 2), ('strip', True), ('words', None)]
-    >>> _hkw(chars=50, fuzz=0)	# doctest: +NORMALIZE_WHITESPACE
-    [('chars', 50), ('ellipsis', '...'), ('fuzz', 0), ('strip', True), ('words', None)]
-    >>> _hkw(words=10)	# doctest: +NORMALIZE_WHITESPACE
-    [('chars', None), ('ellipsis', '...'), ('fuzz', None), ('strip', True), ('words', 10)]
+    >>> _hkw(chars=50)                         # doctest: +NORMALIZE_WHITESPACE
+    [('chars', 50),
+     ('detect_entities', False),
+     ('ellipsis', '...'), ('fuzz', 5),
+     ('return_tuple', False),
+     ('strip', True), ('words', None)]
+    >>> _hkw(chars=50, fuzz=2)                 # doctest: +NORMALIZE_WHITESPACE
+    [('chars', 50),
+     ('detect_entities', False),
+     ('ellipsis', '...'), ('fuzz', 2),
+     ('return_tuple', False),
+     ('strip', True), ('words', None)]
+    >>> _hkw(chars=50, fuzz=0)                 # doctest: +NORMALIZE_WHITESPACE
+    [('chars', 50),
+     ('detect_entities', False),
+     ('ellipsis', '...'), ('fuzz', 0),
+     ('return_tuple', False),
+     ('strip', True), ('words', None)]
+    >>> _hkw(words=10)                         # doctest: +NORMALIZE_WHITESPACE
+    [('chars', None),
+     ('detect_entities', False),
+     ('ellipsis', '...'), ('fuzz', None),
+     ('return_tuple', False),
+     ('strip', True), ('words', 10)]
+    >>> _hkw(words=10, detect_entities=1)      # doctest: +NORMALIZE_WHITESPACE
+    [('chars', None),
+     ('detect_entities', 1),
+     ('ellipsis', '...'), ('fuzz', None),
+     ('return_tuple', False),
+     ('strip', True), ('words', 10)]
+
+    Since we don't consider it likely you have 200-letter words, even in texts
+    with 1000 characters, we have a default limit for the fuzzyness:
+    >>> _hkw(chars=1000)                       # doctest: +NORMALIZE_WHITESPACE
+    [('chars', 1000),
+     ('detect_entities', False),
+     ('ellipsis', '...'), ('fuzz', 10),
+     ('return_tuple', False),
+     ('strip', True), ('words', None)]
+    >>> _hkw(chars=1000, max_fuzz=25)          # doctest: +NORMALIZE_WHITESPACE
+    [('chars', 1000),
+     ('detect_entities', False),
+     ('ellipsis', '...'), ('fuzz', 25),
+     ('return_tuple', False),
+     ('strip', True), ('words', None)]
+    >>> _hkw(chars=100, max_fuzz=25)           # doctest: +NORMALIZE_WHITESPACE
+    [('chars', 100),
+     ('detect_entities', False),
+     ('ellipsis', '...'), ('fuzz', 10),
+     ('return_tuple', False),
+     ('strip', True), ('words', None)]
+
+    Invalid use:
+    >>> _hkw(chars=100, max_fuzz='honk')       # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+      ...
+    ValueError: max_fuzz='honk': integer number expected!
+
     """
-    for key in ('chars', 'words', 'fuzz'):
+    for key in ('chars', 'words', 'fuzz', 'max_fuzz'):
         num = kw.get(key)
         if num is not None:
             if not isinstance(num, int):
@@ -50,17 +101,20 @@ def _head_kwargs(kw):
             elif num <= 0:
                 raise ValueError('%(key)s=%(num)d: must be > 0!'
                                  % locals())
+        elif key == 'max_fuzz':
+            kw[key] = 10
         else:
             kw[key] = None
     chars = kw['chars']
     words = kw['words']
+    max_fuzz = kw.pop('max_fuzz')
     if chars is None and words is None:
         raise TypeError("Neither 'chars' nor 'words' option given!")
 
     fuzz = kw['fuzz']
     if fuzz is None:
         if chars is not None and words is None:
-            kw['fuzz'] = fuzz = int(chars * 0.1)
+            kw['fuzz'] = fuzz = min(max_fuzz, int(chars * 0.1))
 
     strip = kw.get('strip')
     if strip is None:
@@ -69,17 +123,40 @@ def _head_kwargs(kw):
         raise ValueError('strip=%(strip)r: boolean value (including 0 or 1)'
                          ' expected!' % locals())
 
+    detect_entities = kw.get('detect_entities')
+    if detect_entities is None:
+        kw['detect_entities'] = False
+    elif detect_entities not in (0, 1, True, False):
+        raise ValueError('detect_entities=%(detect_entities)r: '
+                         'boolean value (including 0 or 1)'
+                         ' expected!' % locals())
+
     ellipsis = kw.get('ellipsis')
     if ellipsis is None:
         kw['ellipsis'] = '...'
     elif not isinstance(ellipsis, six_string_types):
         raise ValueError('ellipsis=%(ellipsis)r: string expected!' % locals())
 
+    return_tuple = kw.get('return_tuple')
+    if return_tuple is None:
+        kw['return_tuple'] = False
+    elif return_tuple not in (0, 1, True, False):
+        raise ValueError('return_tuple=%(return_tuple)r: '
+                         'boolean value (including 0 or 1)'
+                         ' expected!' % locals())
+
+    if chars is None and return_tuple:
+        raise ValueError('The return_tuple option requires'
+                ' a chars specification!')
+
     strict = kw.pop('strict', True)
     if strict:
-        invalid = set(['chars', 'words', 'fuzz',
-                       'ellipsis', 'strip',
-                       ]) - set(kw.keys())
+        invalid = (set(kw.keys())
+                   - set(['chars', 'words', 'fuzz',
+                          'ellipsis', 'strip',
+                          'detect_entities',
+                          'return_tuple',
+                          ]))
         if invalid:
             raise TypeError('Unknown keyword argument(s)! %s'
                             % (tuple(sorted(invalid)),
@@ -104,6 +181,9 @@ def head(s, **kwargs):
                (yes, by default)
       ellipsis -- the part appended to the result, if something (non-space) is
                  cut off at the end; '...' by default.
+      detect_entities -- when processing HTML, the parser might produce text
+                         with entities, which we don't want to destroy
+                         accidently (and count each as one character).
 
     >>> s1 = (' Now that Python is installed,  we would  like to be able to '
     ...       'easily run the interactive Python  interpreter from the '
@@ -123,6 +203,8 @@ def head(s, **kwargs):
     ... and, a little bit nearer to what we want:
     >>> ' '.join(s1.split())[:50]
     'Now that Python is installed, we would like to be '
+
+    The head function gives us a ellipsis here, since something was cut off:
     >>> head(s1, chars=50, fuzz=0)
     'Now that Python is installed, we would like to be ...'
 
@@ -149,6 +231,8 @@ def head(s, **kwargs):
     'The quick brown fox jumps over the refrige...'
     >>> len('The quick brown fox jumps over the refrige')
     42
+    >>> head(s3, chars=40, fuzz=2, return_tuple=1)
+    ('The quick brown fox jumps over the refrige...', 45)
 
     With chars=50 and fuzz=10, the resulting string will be between 40 and 60
     characters long, plus the ellipsis:
@@ -187,6 +271,36 @@ def head(s, **kwargs):
       ...
     ValueError: string expected; found <type 'int'>!
 
+    Processing HTML, you'll likely face strings which contain character
+    entities, e.g.:
+    >>> ex1 = 'D&#195;&#188;sen b&#195;&#188;rsten au&#195;&#159;en und innen'
+    >>> head(ex1, chars=20)
+    'D&#195;&#188;sen b&#...'
+
+    Oops! With the entities unescaped, our example text would read
+    'Düsen bürsten außen und innen', and we'd certainly like to get more than
+    'Düsen b' and a broken entity.
+    The detect_entities option comes to the rescue:
+    >>> head(ex1, chars=20, detect_entities=1)
+    ...                                        # doctest: +NORMALIZE_WHITESPACE
+    'D&#195;&#188;sen b&#195;&#188;rsten au&#195;&#159;en ...'
+
+    That's more like it, right?
+
+    Well, the calling code might be interested to know how many characters we
+    consider our result to contain.  That's a task for the `return_tuple`
+    option:
+    >>> head(ex1, chars=20, detect_entities=1, return_tuple=1)
+    ('D&#195;&#188;sen b&#195;&#188;rsten au&#195;&#159;en ...', 23)
+    >>> len('D?sen b?rsten au?en ...')
+    23
+    >>> head(ex1, chars=18, detect_entities=1, return_tuple=1, fuzz=0)
+    ('D&#195;&#188;sen b&#195;&#188;rsten au&#195;&#159;e...', 21)
+    >>> head(ex1, chars=20, detect_entities=1, return_tuple=1)
+    ...                                        # doctest: +NORMALIZE_WHITESPACE
+    ('D&#195;&#188;sen b&#195;&#188;rsten au&#195;&#159;en ...', 23)
+    >>> len('D?sen b?rsten au?en ...')
+    23
     """
     kw = dict(kwargs)
     _head_kwargs(kw)
@@ -219,30 +333,38 @@ def head(s, **kwargs):
     chars = kw['chars']
     words = kw['words']
     ellipsis = kw['ellipsis']
+    ellipsis_list = list(ellipsis)
+
+    if kw['return_tuple']:
+        def RESULT():
+            return join(tmp), len(tmp)
+    else:
+        def RESULT():
+            return join(tmp)
+
     if chars is not None:
         fuzz = kw['fuzz']
         minchars = chars - fuzz
         maxchars = chars + fuzz
         hardcut = not fuzz
         NONGLOBAL['done'] = 0
+
         if hardcut:
+
             def add():
                 # hard chars limit, and optional words limit
                 chunklen = len(buf)
-                if chunklen and NONGLOBAL['done']:
-                    tmp.append(ellipsis)
-                    NONGLOBAL['result'] = join(tmp)
+                if buf and NONGLOBAL['done']:
+                    tmp.extend(ellipsis_list)
                     return 1
 
                 charsleft = maxchars - NONGLOBAL['chars']
                 if charsleft < chunklen:
-                    chunk = join(buf[:charsleft])
-                    tmp.extend([chunk, ellipsis])
-                    NONGLOBAL['result'] = join(tmp)
+                    tmp.extend(buf[:charsleft])
+                    tmp.extend(ellipsis_list)
                     return 1
-                chunk = join(buf)
+                tmp.extend(buf)
                 del buf[:]
-                tmp.append(chunk)
                 if charsleft == chunklen:
                     NONGLOBAL['done'] = 1
                     # We might still need to append the ellipsis:
@@ -252,8 +374,7 @@ def head(s, **kwargs):
 
                 if inword and words is not None:
                     if NONGLOBAL['words'] >= words:
-                        tmp.append(ellipsis)
-                        NONGLOBAL['result'] = join(tmp)
+                        tmp.extend(ellipsis_list)
                         return 1
                     NONGLOBAL['words'] += 1
                 return 0
@@ -265,21 +386,17 @@ def head(s, **kwargs):
                 chunklen = len(buf)
                 if (NONGLOBAL['done']
                         or NONGLOBAL['chars'] >= minchars and inword):
-                    tmp.append(ellipsis)
-                    NONGLOBAL['result'] = join(tmp)
+                    tmp.extend(ellipsis_list)
                     return 1
 
                 charsleft = maxchars - NONGLOBAL['chars']
                 if charsleft < chunklen:
                     if charsleft > 0 and NONGLOBAL['chars'] < minchars:
-                        chunk = join(buf[:charsleft])
-                        tmp.append(chunk)
-                    tmp.append(ellipsis)
-                    NONGLOBAL['result'] = join(tmp)
+                        tmp.extend(buf[:charsleft])
+                    tmp.extend(ellipsis_list)
                     return 1
-                chunk = join(buf)
+                tmp.extend(buf)
                 del buf[:]
-                tmp.append(chunk)
                 if charsleft == chunklen:
                     NONGLOBAL['done'] = 1
                     # We might still need to append the ellipsis:
@@ -289,35 +406,34 @@ def head(s, **kwargs):
 
                 if inword and words is not None:
                     if NONGLOBAL['words'] >= words:
-                        tmp.append(ellipsis)
-                        NONGLOBAL['result'] = join(tmp)
+                        tmp.extend(ellipsis_list)
                         return 1
                     NONGLOBAL['words'] += 1
                 return 0
 
-    else:
+    else:  # chars is None
         assert words is not None
         assert chars is None
         fuzz = None
 
         def add():
             # words limit only
-            chunk = join(buf)
-            del buf[:]
             if inword:
                 if NONGLOBAL['words'] >= words:
-                    tmp.append(ellipsis)
-                    NONGLOBAL['result'] = join(tmp)
+                    tmp.extend(ellipsis_list)
                     return 1
                 NONGLOBAL['words'] += 1
-            tmp.append(chunk)
+            tmp.extend(buf)
+            del buf[:]
             return 0
 
+    if kw['detect_entities']:
+        s = entity_aware(s)
     for prevchar, ch, nextchar in sequence_slide(s):
         if ch.isalnum():  # include numbers here
             if not inword:
                 if add():
-                    return NONGLOBAL['result']
+                    return RESULT()
                 inword = 1
             prev_is_space = 0
         elif (ch in numseps
@@ -329,7 +445,7 @@ def head(s, **kwargs):
         else:
             if inword:
                 if add():
-                    return NONGLOBAL['result']
+                    return RESULT()
                 inword = 0
             if ch.isspace():
                 if prev_is_space:
@@ -339,12 +455,19 @@ def head(s, **kwargs):
                 prev_is_space = 0
         buf.append(ch)
     if buf:
-        # tmp.append((inword, join(buf)))
         add()
-    return join(tmp)
+    return RESULT()
 
 
 if __name__ == '__main__':
+    # Standard library:
+  if 0:
+      s3 = (' The quick brown fox  jumps over the refrigerator. ')
+      from pdb import set_trace; set_trace()
+      res3 = head(s3, chars=40, fuzz=2, return_tuple=1)
+      res3 == 'The quick brown fox jumps over the refrige...'[0]
+      print(res3)
+  else:
     # Standard library:
     import doctest
     doctest.testmod()

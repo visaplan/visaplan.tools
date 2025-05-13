@@ -13,19 +13,20 @@ from decimal import Decimal
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
 __all__ = [
-           'gimme_None',
-           'gimme_True',
-           'gimme_False',
-           'gimmeConst__factory',
-           'makeBool',
-           'NoneOrBool',
-           'NoneOrInt',
-           'NoneOrString',
-           'IntOrOther',
-           'extract_float',
-           'translate_dummy',
-           'check_kwargs',
-           ]
+    'gimme_None',
+    'gimme_True',
+    'gimme_False',
+    'gimmeConst__factory',
+    'makeBool',
+    'NoneOrBool',
+    'NoneOrInt',
+    'NoneOrString',
+    'is_nonempty_string',
+    'IntOrOther',
+    'extract_float',
+    'translate_dummy',
+    'check_kwargs',
+    ]
 # -------------------------------------------- [ Daten ... [
 LOWER_TRUE = frozenset('yes y ja j true on'.split() +
                        [True])
@@ -176,6 +177,21 @@ def NoneOrString(val):
         return None
     val = val.strip()
     return val or None
+
+
+def is_nonempty_string(val):
+    """
+    >>> is_nonempty_string(u'')
+    False
+    >>> is_nonempty_string(u'123')
+    True
+    >>> is_nonempty_string(123)
+    False
+    """
+    if isinstance(val, six_string_types):
+        return bool(val)
+    else:
+        return False
 
 
 def IntOrOther(val):

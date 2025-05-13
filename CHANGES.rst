@@ -1,6 +1,30 @@
 Changelog
 =========
 
+
+1.5.0 (estimated)
+-----------------
+
+Breaking changes:
+
+- Remove deprecated ``.http`` functions:
+
+  - ``http_statustext``, because of questionable `func` option
+  - ``make_url``
+
+
+1.3.10 (2023-03-08)
+-------------------
+
+New Features:
+
+- new module .minicurr to map some popular currency specs to their respective 
+  `ISO 4217`_ codes
+- new function .minifuncs.is_nonempty_string
+
+[tobiasherp]
+
+
 1.3.9 (2022-11-21)
 ------------------
 
@@ -378,6 +402,7 @@ New Features:
   [tobiasherp]
 
 .. _collections-extended: https://pypi.org/project/collections-extended
+.. _`ISO 4217`: https://www.iso.org/iso-4217-currency-codes.html
 .. _six: https://pypi.org/project/six
 .. _visaplan.plone.sqlwrapper: https://pypi.org/project/visaplan.plone.sqlwrapper
 .. _zope.deprecation: https://pypi.org/project/zope.deprecation

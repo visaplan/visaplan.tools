@@ -24,6 +24,26 @@ Breaking changes:
 [tobiasherp]
 
 
+1.3.5 (2021-09-07)
+------------------
+
+New Features:
+
+- `.html.make_picture` function to create an ``<img>`` element,
+  wrapped in a ``<picture>`` and / or ``<a>`` element as needed
+  (currently limited to one ``<source>``
+  and not yet supporting ``sizes`` attributes)
+
+- `.lands0` module:
+
+  - new function `conflate` to join strings,
+    with a simple remove-equal-leading-words facility;
+    allows non-default or suppressed sorting
+  - key function `nouns_first`, e.g. for use with `conflate`
+
+[tobiasherp]
+
+
 1.3.4 (2021-03-24)
 ------------------
 

@@ -16,7 +16,17 @@ __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 # Standard library:
 from string import strip
 
+try:
+    # Standard library:
+    from html import escape
+except ImportError:
+    # Standard library:
+    from cgi import escape
+
+
 __all__ = [
+           'conflate',     # sort sequences, stripping out repetitions
+           'nouns_first',  # a useful little key function
            # -------------- [ aus unitracc.tools.forms ... [
            'list_of_strings',
            'string_of_list',
@@ -32,6 +42,216 @@ __all__ = [
            'make_default_prefixer',
            # --------------- ] ... aus unitracc.tools.misc ]
            ]
+
+
+def conflate(seq, joiner=u', ', subst=None, keyfunc=None, **kwargs):
+    """
+    Create a nicely formatted string built from the elements of a sequence
+    in arbitrary order.
+
+    We create a little test helper:
+    >>> def f(seq, **kw):
+    ...     defaults = {'joiner': ', '}
+    ...     defaults.update(kw)
+    ...     return conflate(seq, **defaults)
+    >>> f(['Some', 'silly', 'Sequence'])
+    'Sequence, Some, silly'
+    >>> f(['Some', 'silly', 'Sequence'], keyfunc=str.lower)
+    'Sequence, silly, Some'
+
+    Now some more interesting example:
+    >>> f(['Reparatur im Spachtelverfahren',
+    ...    'Reparatur durch Injektion',
+    ...    'Reparatur mittels Innenmanschetten',
+    ...    'Reparatur mit Kurzliner',
+    ...    'Reparatur mittels Hutprofil'],
+    ...   keyfunc=nouns_first)                # doctest: +NORMALIZE_WHITESPACE
+    'Reparatur mittels Hutprofil, Reparatur durch Injektion,
+    Reparatur mittels Innenmanschetten, Reparatur mit Kurzliner,
+    Reparatur im Spachtelverfahren'
+
+    and, using a substitute:_
+    >>> f(['Reparatur im Spachtelverfahren',
+    ...    'Reparatur durch Injektion',
+    ...    'Reparatur mittels Innenmanschetten',
+    ...    'Reparatur mit Kurzliner',
+    ...    'Reparatur mittels Hutprofil'],
+    ...   subst='~',
+    ...   keyfunc=nouns_first)                # doctest: +NORMALIZE_WHITESPACE
+    'Reparatur mittels Hutprofil,
+    ~          durch   Injektion,
+    ~          mittels Innenmanschetten,
+    ~          mit     Kurzliner,
+    ~          im      Spachtelverfahren'
+
+    (Spaces added to show the interesting part: the order is given by the 3rd
+    words each, since those are upper-cased, as is often done in headlines,
+    or in German texts for all nouns.)
+
+    What if we need to wrap each topic in an HTML element?
+    >>> f(['Reparatur', 'Baugrund'],
+    ...   subst='~',
+    ...   elem='a',
+    ...   klass='label')                # doctest: +NORMALIZE_WHITESPACE
+    '<a class="label">Baugrund,</a>
+     <a class="label">Reparatur</a>'
+
+    Currently, the "joiner" may contain two characters; if creating HTML,
+    the 1st of these is appended as a "tail" to the element's contents,
+    and the remainder (usually a blank) separates the elements.
+    This is a pragmatic solution which frees you from the need to e.g. add
+    those "tails" via CSS in an :after element.
+
+    However, you can use two blanks as a joiner:
+    >>> f(['Reparatur', 'Baugrund'],
+    ...   subst='~',
+    ...   elem='a',
+    ...   joiner='  ',
+    ...   klass='label')                # doctest: +NORMALIZE_WHITESPACE
+    '<a class="label">Baugrund</a>
+     <a class="label">Reparatur</a>'
+
+    Since we can't think of a reason to append a blank to the element's
+    contents, it is stripped down to an empty string, and the only effective
+    joiner is the one separating the elements.
+
+    This will yield "clean" elements which are still separated by blanks.
+
+    Finally, some edge cases.
+    If we have a substitution, repetitions are removed (since we iterate all
+    values anyway):
+
+    >>> f(['Baugrund', 'Reparatur', 'Baugrund'],
+    ...   subst='~')
+    'Baugrund, Reparatur'
+
+    Without the substitution, this won't happen, following the GIGO principle:
+    >>> f(['Baugrund', 'Reparatur', 'Baugrund'])
+    'Baugrund, Baugrund, Reparatur'
+
+    You could easily avoid this giving a set:
+    >>> f(set(['Baugrund', 'Reparatur', 'Baugrund']))
+    'Baugrund, Reparatur'
+
+    Given an empty sequence, you'll always get an empty string:
+    >>> f([])
+    ''
+
+    You might have reason to suppress sorting, e.g. for a hierarchy of
+    categories, by specifying a non-None falsy keyfunc value:
+    >>> f(['Inspection', 'Damage description'], keyfunc=0, joiner=' >> ')
+    'Inspection >> Damage description'
+    >>> f(['Renovation', 'Lining with pipes',
+    ...    'Lining with discrete pipes',
+    ...    ], keyfunc=0, subst='...', joiner=' >> ')
+    'Renovation >> Lining with pipes >> ... with discrete pipes'
+
+    Creating HTML code, we escape by default:
+    >>> f(['Reparatur', 'Bau>grund'],
+    ...   subst='<',
+    ...   elem='a>"',
+    ...   joiner='& ',
+    ...   klass='la&bel')                # doctest: +NORMALIZE_WHITESPACE
+    '<a&gt;&quot; class="la&amp;amp;bel">Bau&gt;grund&amp;</a&gt;&quot;>
+    <a&gt;&quot; class="la&amp;amp;bel">Reparatur</a&gt;&quot;>'
+
+    As you see, quoting happens in all parts, so for untrusted input, you
+    shouldn't get harmful HTML code.
+
+    If we don't create HTML, however, we don't do any quoting by default,
+    so you are on your own:
+    >>> f(['Reparatur', 'Bau>grund'],
+    ...   elem=None,
+    ...   joiner='& ')                   # doctest: +NORMALIZE_WHITESPACE
+    'Bau>grund& Reparatur'
+
+    You can explicitly request quoting:
+    >>> f(['Reparatur', 'Bau>grund'],
+    ...   quote=True,
+    ...   joiner='& ')                   # doctest: +NORMALIZE_WHITESPACE
+    'Bau&gt;grund&amp; Reparatur'
+
+    """
+    if keyfunc is None or keyfunc:
+        liz = sorted(seq, key=keyfunc)
+    else:
+        liz = list(seq)
+    if not liz:
+        return joiner.join(liz)
+
+    # HTML element wrapping:
+    pop = kwargs.pop
+    klass = pop('klass', None)
+    elem = pop('elem', 'span' if klass else None)
+    quote = pop('quote', elem is not None)
+    if quote:
+        if elem:
+            elem =  escape(elem,  1)
+        if klass:
+            klass = escape(klass, 1)
+
+    if elem:
+        leadin = ['<', elem]
+        if klass:
+            klass = escape(klass, quote=1)
+            leadin.extend([' class="', klass, '"'])
+        leadin.append('>')
+        leadin = ''.join(leadin)
+        leadout = '</%(elem)s>' % locals()
+        tail = joiner[:1].strip()
+        if quote and tail:
+            tail = escape(tail, quote=1)
+        joiner = joiner[1:]
+    if quote and joiner:
+        joiner = escape(joiner, quote=1)
+
+    # substitutions
+    if subst is not None and liz[1:]:
+        firstword = None
+        res = []
+        for chunk in liz:
+            if chunk in res:
+                continue
+            sublist = chunk.split()
+            if firstword is None:
+                firstword = sublist[0]
+                res.append(chunk)
+                continue
+            if sublist[0] == firstword:
+                sublist[0] = subst
+                res.append(' '.join(sublist))
+            else:
+                firstword = sublist[0]
+                res.append(chunk)
+    else:
+        res = liz
+
+    if quote:
+        res = [escape(chunk, quote=1) for chunk in res]
+    if elem:
+        return joiner.join([
+            leadin + chunk + tail + leadout
+            for chunk in res[:-1]
+            ] +
+            [leadin + res[-1] + leadout])
+    else:
+        return joiner.join(res)
+
+
+def nouns_first(s):
+    """
+    >>> nouns_first('Reparatur mittels Hutprofil')
+    ('Reparatur', 'Hutprofil', 'mittels')
+    """
+    head = []
+    tail = []
+    for chunk in s.split():
+        if chunk[0].isupper():
+            head.append(chunk)
+        else:
+            tail.append(chunk)
+    head.extend(tail)
+    return tuple(head)
 
 
 # ------------------------- [ aus unitracc.tools.forms ... [

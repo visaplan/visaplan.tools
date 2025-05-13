@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*- vim: ts=8 sts=4 sw=4 si et tw=79
 
 # Python compatibility:
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 from six.moves.urllib.parse import urlsplit, urlunsplit
 
+# Setup tools:
 import pkg_resources
 
 try:
@@ -17,6 +18,7 @@ except pkg_resources.DistributionNotFound:
     print('*** zope.deprecation not installed!')
 else:
     HAS_ZOPEDEPRECATION = True
+    # Zope:
     from zope.deprecation import deprecated
     deprecated(
         'http_statustext',

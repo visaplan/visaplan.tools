@@ -128,12 +128,17 @@ pip-selfcheck.json
 .svn/
 
 # visaplan environment
-auto.msg
+auto.msg*
 tools/
 update-module
 init
 init.vim
 CHANGES-in-*.rst
+all-versioned.md5
+ignore.*
+*.lst
+.restore-env.sh
+.svn-*.tmp
 
 # plonecli-generated
 log.html
@@ -150,3 +155,4 @@ report.html
 !.gitkeep
 !.travis.yml
 !src/visaplan
+

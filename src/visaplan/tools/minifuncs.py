@@ -7,6 +7,9 @@ from __future__ import absolute_import, print_function
 
 from six import string_types as six_string_types
 
+# Standard library:
+from decimal import Decimal
+
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
 __all__ = [
@@ -19,6 +22,7 @@ __all__ = [
            'NoneOrInt',
            'NoneOrString',
            'IntOrOther',
+           'extract_float',
            'translate_dummy',
            'check_kwargs',
            ]
@@ -194,6 +198,37 @@ def IntOrOther(val):
         return int(val)
     except ValueError:
         return val
+
+
+def extract_float(s):
+    """
+    Extrahiere eine Zahl aus einem String, der eine Währungsangabe enthält.
+
+    >>> extract_float('600,00 &euro;')
+    600.0
+
+    >>> extract_float('700.00 $')
+    700.0
+
+    Wenn der übergebene Wert bereits eine Zahl ist,
+    gib ihn unverändert zurück:
+    >>> extract_float(600.0)
+    600.0
+    """
+    if isinstance(s, (float, int, Decimal)):
+        return s
+    if not s:
+        raise ValueError("Can't extract float from %(s)r"
+                         % locals())
+    for subs in s.split():
+        try:
+            if ',' in subs:
+                return float(subs.replace(',', '.'))
+            else:
+                return float(subs)
+        except ValueError:
+            pass
+    raise
 
 
 def translate_dummy(s, *args, **kwargs):

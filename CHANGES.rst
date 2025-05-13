@@ -5,10 +5,10 @@ Changelog
 2.0.0 (estimated)
 -----------------
 
-- Breaking changes:
+Breaking changes:
 
-  - Signature change (e.g. name of first argument: ``form`` --> ``dic``) for
-    ``dicts.update_dict``.
+- Signature change (e.g. name of first argument: ``form`` --> ``dic``) for
+  ``dicts.update_dict``.
 
 
 1.5.0 (estimated)
@@ -20,6 +20,16 @@ Breaking changes:
 
   - ``http_statustext``, because of questionable `func` option
   - ``make_url``
+
+[tobiasherp]
+
+
+1.3.4 (2021-03-24)
+------------------
+
+New Features:
+
+- new function ``minifuncs.extract_float``
 
 [tobiasherp]
 

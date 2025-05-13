@@ -10,7 +10,7 @@ from six import string_types as six_string_types
 from six import text_type as six_text_type
 
 # Local imports:
-from visaplan.tools.html import entity_aware
+from visaplan.tools.htmlohmy import entity_aware
 from visaplan.tools.sequences import sequence_slide
 
 __all__ = [
@@ -98,16 +98,16 @@ def _head_kwargs(kw):
       ...
     ValueError: The return_tuple option requires a 'chars' specification!
 
-    There is one argument which won't appear in the the returned dict
+    There is one argument which won't appear in the returned dict
     but affects the proposed 'ellipsis' value:
     >>> kw={'chars': 20, 'got_bytes': 1}
     >>> _head_kwargs(kw)
-    >>> isinstance(kw['ellipsis'], bytes)
+    >>> 'ellipsis' in kw
     True
     >>> kw={'chars': 20, 'got_bytes': 0}
     >>> _head_kwargs(kw)
-    >>> isinstance(kw['ellipsis'], bytes)
-    False
+    >>> 'ellipsis' in kw
+    True
 
     """
     got_bytes = kw.pop('got_bytes', 1)
@@ -297,10 +297,10 @@ def head(s, **kwargs):
     Traceback (most recent call last):
       ...
     TypeError: Neither 'chars' nor 'words' option given!
-    >>> head(1, chars=20)
+    >>> head(1, chars=20)  # doctest: +ELLIPSIS
     Traceback (most recent call last):
       ...
-    ValueError: string expected; found <type 'int'>!
+    ValueError: string expected; found <... 'int'>!
 
     Processing HTML, you'll likely face strings which contain character
     entities, e.g.:

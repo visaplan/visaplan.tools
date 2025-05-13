@@ -12,7 +12,14 @@ __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
 # Standard library:
 from collections import defaultdict
-from string import strip
+from sys import version_info
+if version_info[0] <= 2:
+    # Standard library:
+    from string import strip
+else:
+    def strip(s, *args, **kw):
+        return s.strip(*args, **kw)
+
 
 # Local imports:
 from visaplan.tools.minifuncs import NoneOrString
@@ -92,8 +99,13 @@ def subdict(form, keys=None, defaults={},
     ...               'nothing': None,
     ...               'name': u'Heinz Kunz '},
     ...              factory_map=defaultdict(lambda: strip))
-    >>> sorted(sd.items())
-    [('age', 18), ('name', u'Heinz Kunz'), ('nothing', None), ('username', 'heinz')]
+    >>> from visaplan.tools.htmlohmy import _prefixed
+    >>> [(k, _prefixed(v)) for (k, v) in sorted(sd.items())]
+    ...                                       # doctest: +NORMALIZE_WHITESPACE
+    [('age',      18),
+     ('name',     u'Heinz Kunz'),
+     ('nothing',  None),
+     ('username', u'heinz')]
 
     Wenn eine Funktion <keyfunc> übergeben wird (vorerst nur mit keys=None),
     werden nur Schlüssel extrahiert, für die diese Funktion True zurückgibt:

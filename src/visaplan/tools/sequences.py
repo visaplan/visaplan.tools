@@ -8,8 +8,13 @@ from __future__ import absolute_import
 from six import string_types as six_string_types
 from six.moves import map, range
 
-# Standard library:
-from string import strip
+from sys import version_info
+if version_info[0] <= 2:
+    # Standard library:
+    from string import strip
+else:
+    def strip(s, *args, **kw):
+        return s.strip(*args, **kw)
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
@@ -229,7 +234,7 @@ def make_names_tupelizer(forbidden,
     >>> strict(['href', 'Title'])
     Traceback (most recent call last):
       ...
-    ValueError: Forbidden names found! (set(['href'])
+    ValueError: Forbidden names found! ('href',)
 
     """
     forbidden = set(forbidden)
@@ -241,7 +246,8 @@ def make_names_tupelizer(forbidden,
         unique = set(liz)
         invalid = unique.intersection(forbidden)
         if invalid:
-            raise ValueError('Forbidden names found! (%(invalid)r'
+            invalid = tuple(sorted(invalid))
+            raise ValueError('Forbidden names found! %(invalid)r'
                              % locals())
         return tuple(sorted(unique))
 
@@ -281,8 +287,15 @@ def make_dict_sequencer(firstkey=None,
     >>> raw1 = {'default': 'Vorgabe', 'other': 'Abweichung'}
     >>> raw1copy = dict(raw1)
     >>> convert = make_dict_sequencer('default')
-    >>> list(convert(raw1))
-    [{'key': 'default', 'val': 'Vorgabe'}, {'key': 'other', 'val': 'Abweichung'}]
+    >>> seq1 = convert(raw1)
+    >>> sorted(next(seq1).items())  # doctest: +NORMALIZE_WHITESPACE
+    [('key', 'default'), ('val', 'Vorgabe')]
+    >>> sorted(next(seq1).items())  # doctest: +NORMALIZE_WHITESPACE
+    [('key', 'other'), ('val', 'Abweichung')]
+    >>> next(seq1)
+    Traceback (most recent call last):
+      ...
+    StopIteration
 
     Durch die Verarbeitung wird (wenn firstkey nicht None ist) das Eingabe-Dict
     geändert:
@@ -294,24 +307,44 @@ def make_dict_sequencer(firstkey=None,
 
     >>> def si(dic):
     ...     return sorted(dic.items())
+    ...  #   return sorted([(key, sorted(val)) in dic.items)])
     >>> gen1 = convert({'default': {'key': 'default', 'val': 'Vorgabe 2'},
     ...                 'other': {'val': 'Abweichung 2'}})
-    >>> list([si(dic) for dic in gen1])
-    [[('key', 'default'), ('val', 'Vorgabe 2')], [('key', 'other'), ('val', 'Abweichung 2')]]
+    >>> next(gen1)
+    {'key': 'default', 'val': 'Vorgabe 2'}
+    >>> next(gen1)
+    {'val': 'Abweichung 2', 'key': 'other'}
+    >>> next(gen1)
+    Traceback (most recent call last):
+      ...
+    StopIteration
+
     >>> gen2 = convert({'default': {'key': 'FEHLER', 'val': 'Vorgabe 2'},
     ...                 'other': {'val': 'Abweichung 2'}})
 
     Zunächst wird nur der Generator erzeugt; beim Iterieren fällt der Fehler
     dann auf:
-    >>> list([si(dic) for dic in gen2])
+    >>> next(gen2)  # doctest: +NORMALIZE_WHITESPACE
     Traceback (most recent call last):
       ...
-    ValueError: item={'val': 'Vorgabe 2', 'key': 'FEHLER'}, item['key']='FEHLER', thiskey='default'
+    ValueError: item={'key': 'FEHLER',
+                      'val': 'Vorgabe 2'},
+                      item['key']='FEHLER', thiskey='default'
+
+    >>> list()
+    []
 
     >>> gen3 = convert({'default': {'key': 'default', 'val': 'Vorgabe 2'},
     ...                 'other': {'val': 'Abweichung 2'}}, curval='other')
-    >>> list([si(dic) for dic in gen3])
-    [[('key', 'default'), ('selected', False), ('val', 'Vorgabe 2')], [('key', 'other'), ('selected', True), ('val', 'Abweichung 2')]]
+    >>> next(gen3)
+    {'key': 'default', 'val': 'Vorgabe 2', 'selected': False}
+    >>> next(gen3)
+    {'val': 'Abweichung 2', 'key': 'other', 'selected': True}
+    >>> next(gen3)
+    Traceback (most recent call last):
+      ...
+    StopIteration
+
     """
     if convert_nondict is None:
         def convert_nondict(val):

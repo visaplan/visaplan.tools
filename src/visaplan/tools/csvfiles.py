@@ -13,7 +13,7 @@ from codecs import BOM_UTF8
 
 if sys.version_info > (3,):
    # Standard library:
-   from io.StringIO import StringIO
+   from io import StringIO
 else:
    # Standard library (Python 2):
    from StringIO import StringIO
@@ -46,15 +46,16 @@ def csv_writer(csvfile, dialect='excel_ssv', **kwargs):
     Reihenfolge weggeschrieben werden; nicht aufgeführte Felder werden ignoriert:
 
     >>> sq = make_sequencer(fieldnames)
-    >>> wr.writerow(fieldnames)
+    >>> ignored = wr.writerow(fieldnames)
     >>> dic1 = dict(eins=1, zwei=22, drei=222, boring='IGNORED')
-    >>> wr.writerow(sq(dic1))
+    >>> ignored = wr.writerow(sq(dic1))
     >>> dic2 = dict(drei='extradrei', zwei=0.5, eins='\'')
-    >>> wr.writerow(sq(dic2))
+    >>> ignored = wr.writerow(sq(dic2))
 
     Schreiben beendet; jetzt zurück auf los, und das Ergebnis lesen:
 
     >>> io.seek(0)
+    0
     >>> str(io.read())
     "eins;zwei;drei\r\n1;22;222\r\n';0.5;extradrei\r\n"
 
@@ -83,9 +84,12 @@ def make_sequencer(keys, factory=None):
     die zur Transformation jedes einzelnen Werts verwendet wird;
     hier, um alle Strings in Unicode zu konvertieren:
 
+
+
+    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> from visaplan.tools.coding import make_safe_stringdecoder
     >>> uvalues = make_sequencer(names, make_safe_stringdecoder())
-    >>> uvalues(dic)
+    >>> [_prefixed(val) for val in uvalues(dic)]
     [4, u'Dackel', 2, 1]
     """
 

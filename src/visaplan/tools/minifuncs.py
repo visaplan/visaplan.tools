@@ -226,7 +226,7 @@ def NoneOrDecimal(val):
     """
     Eine valide Dezimalzahl, oder None ("Decimal('')" ergibt einen ValueError)
 
-    >>> Decimal('')
+    >>> Decimal('')  # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
       ...
     InvalidOperation: Invalid literal for Decimal: ''
@@ -447,9 +447,10 @@ def check_kwargs(checked_kwargs, **my_kwargs):
     But you can override the laxness from the checked dict and choose to be
     strict anyway:
     >>> check_kwargs({'pingelig': False, 'bogus': 42}, strict=True, **check_kw)
+    ... # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    TypeError: Unknown option 'bogus' found!
+    TypeError: Unknown option ... found!
 
     The `strict` key is considered to be aimed for this checking function,
     so it is consumed by default:

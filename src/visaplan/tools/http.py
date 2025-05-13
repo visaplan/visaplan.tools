@@ -4,9 +4,15 @@
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-from importlib_metadata import PackageNotFoundError
-from importlib_metadata import version as pkg_version
 from six.moves.urllib.parse import urlsplit, urlunsplit
+
+from sys import version_info
+if version_info[:2] >= (3, 8):
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as pkg_version
+else:
+    from importlib_metadata import PackageNotFoundError
+    from importlib_metadata import version as pkg_version
 
 try:
     pkg_version('zope.deprecation')

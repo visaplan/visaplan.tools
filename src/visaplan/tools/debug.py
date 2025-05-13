@@ -247,6 +247,7 @@ def pretty_callstack(limit=3, revert=True, verbose=True):
     raw_info = extract_stack(limit=limit+1)
     res = []
     for tup in raw_info[:-1]:
+        # tup is a FrameSummary object
         filename, lineno, funcname = tup[:3]
         if filename.endswith('.pyc'):
             filename = filename[:-1]
@@ -254,14 +255,13 @@ def pretty_callstack(limit=3, revert=True, verbose=True):
             and '%(filename)s[%(funcname)s]: %(lineno)d'
             or  '%(filename)s: %(lineno)d'
             ) % locals())
+    if revert:
+        res.reverse()
     if verbose:
         hint = ('The last %d calling functions, innermost %s:'
                 ) % (len(res),
                      revert and 'FIRST' or 'last',
                      )
-    if revert:
-        res.reverse()
-    if verbose:
         res.insert(0, hint)
     return res
 
@@ -570,7 +570,8 @@ def _needle_tuples(haystack, needles, found, before, after):
     >>> needles = ['  ', 'needle']
 
     This little helper returns nothing ...
-    >>> _needle_tuples(haystack, needles, found, before=5, after=10)
+    >>> _needle_tuples(haystack, needles, found, before=5, after=10) is None
+    True
 
     ... since the calling function will find the list filled:
     >>> found
@@ -602,7 +603,12 @@ def has_strings(haystack, *needles, **kwargs):
     ...             func=liz.append)
     True
     >>> liz
-    ["'Vitaler Ne'...", '        v', " 6: 'aler Nebe'", " 8: 'er Nebel mit '", "36: 'en relati'"]
+    ...         # doctest: +NORMALIZE_WHITESPACE +REPORT_NDIFF
+    ["'Vitaler Ne'...",
+     '        v',
+     " 6: 'aler Nebe'",
+     " 8: 'er Nebel mit '",
+     "36: 'en relati'"]
 
     This function is designed to be used in the pdb b(reak) feature:
     the optional 2nd argument is an expression which -- if evaluating to
@@ -698,24 +704,29 @@ def make_debugfile_writer(dirname, **kwargs):
 
 
 if __name__ == '__main__':
-    # Standard library:
-    import doctest
-    doctest.testmod()
+    from sys import argv
+    if '--doctest' in argv:
+        # Standard library:
+        import doctest
+        doctest.testmod()
+    else:
+        print('Little pretty_callstack() demo:')
+        def a():
+            print('Funktion a ...')
+            print('\n'.join(pretty_callstack()))
+            print('... Funktion a')
 
-    def a():
-        print('Funktion a ...')
-        print('\n'.join(pretty_callstack()))
-        print('... Funktion a')
+        def b():
+            print('Funktion b ...')
+            a()
+            print('... Funktion b')
 
-    def b():
-        print('Funktion b ...')
-        a()
-        print('... Funktion b')
+        def c():
+            print('Funktion c ...')
+            b()
+            print('\n'.join(pretty_callstack()))
+            print('... Funktion c')
 
-    def c():
-        print('Funktion c ...')
-        b()
-        print('\n'.join(pretty_callstack()))
-        print('... Funktion c')
+        c()
+        print('There is more; use --doctest to run the tests)')
 
-    c()

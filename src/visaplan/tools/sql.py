@@ -46,11 +46,11 @@ __all__ = [# The "fabulous four":
            ]
 
 # Standard library:
-from string import digits, letters, uppercase, whitespace
+from string import digits, ascii_letters, ascii_uppercase, whitespace
 
-NAMECHARS = frozenset(letters+'._')
-ALLNAMECHARS = frozenset(letters+digits+'._')
-SNIPPETCHARS = frozenset(uppercase + whitespace)
+NAMECHARS = frozenset(ascii_letters+'._')
+ALLNAMECHARS = frozenset(ascii_letters+digits+'._')
+SNIPPETCHARS = frozenset(ascii_uppercase + whitespace)
 
 
 # ------------------------------------------------- [ SQL basics ... [
@@ -90,6 +90,7 @@ def check_name(sqlname, for_select=False):
 
     Das Beispiel aus den select-Doctests:
     >>> check_name('evil_field;truncate table users')
+    ... # doctest: +ELLIPSIS
     Traceback (most recent call last):
       ...
     ValueError: Invalid chars in 'evil_field;truncate table users': (' ', ';')
@@ -100,7 +101,7 @@ def check_name(sqlname, for_select=False):
     invalid = set(sqlname).difference(ALLNAMECHARS)
     if invalid:
         raise ValueError('Invalid chars in %r: %s'
-                         % (sqlname, tuple(invalid),))
+                         % (sqlname, tuple(sorted(invalid))))
     for s in sqlname.split('.'):
         if not s:
             raise ValueError('Empty segment in %r' % sqlname)
@@ -404,7 +405,7 @@ def replace_names(sql, **kwargs):
     return sql % dic
 
 
-WHERE = intern('WHERE')
+WHERE = 'WHERE'
 def make_where_mask(dic, fields=None, keyword=WHERE):
     """
     Komfort-Funktion; wenn die Query-Daten schon als dict vorliegen,
@@ -487,7 +488,7 @@ def is_sequence(arg):
     False
 
     Auch Generatoren werden erkannt:
-    >>> is_sequence(xrange(1, 3))
+    >>> is_sequence(range(1, 3))
     True
     """
     if hasattr(arg, 'strip'):
@@ -919,9 +920,9 @@ def insert(table, dict_of_values,  # ------------- [ insert ... [
       strict -- if False, unknown keyword arguments will be silently ignored;
                 if True (default), a TypeError will be raised.
 
-    >>> insert('die_tabelle', {'name': 'Zaphod', 'heads': 2})[0]
+    >>> insert('die_tabelle', {'heads': 2, 'name': 'Zaphod'})[0]
     'INSERT INTO die_tabelle (heads, name) VALUES (%(heads)s, %(name)s);'
-    >>> insert('die_tabelle', {'name': 'Zaphod', 'heads': 2},
+    >>> insert('die_tabelle', {'heads': 2, 'name': 'Zaphod'},
     ...        returning='id')[0]
     'INSERT INTO die_tabelle (heads, name) VALUES (%(heads)s, %(name)s) RETURNING id;'
 
@@ -1001,8 +1002,9 @@ def update(table, dict_of_values,  # ------------- [ update ... [
     ...              {'id': [47, 11]})
     >>> tup[0]
     'UPDATE the_table SET status=%(status)s WHERE id = ANY(%(id)s);'
-    >>> tup[1]
-    {'status': 'done', 'id': [47, 11]}
+    >>> sorted(tup[1].items())  # doctest: +NORMALIZE_WHITESPACE
+    [('id',      [47, 11]),
+     ('status', 'done')]
 
     Die Funktion akzeptiert zwei Dictionary-Optionen, die oft zusammen verwendet werden;
     was passiert mit etwaigen Variablen?
@@ -1012,8 +1014,10 @@ def update(table, dict_of_values,  # ------------- [ update ... [
     >>> tup2 = update('the.table', values, query_data)
     >>> tup2[0]
     'UPDATE the.table SET status=%(status)s WHERE id = ANY(%(id)s);'
-    >>> tup2[1]
-    {'status': 'success', 'id': [1, 2, 5]}
+    >>> list(reversed(list(tup2[1].items())))  # doctest: +NORMALIZE_WHITESPACE
+    [('status', 'success'),
+     ('id',     [1, 2, 5])]
+
 
     Beide Eingabe-Dictionarys sind unverändert:
 
@@ -1042,8 +1046,10 @@ def update(table, dict_of_values,  # ------------- [ update ... [
     ...               where='WHERE status = %(status_old)s')
     >>> tup4[0]
     'UPDATE the_table SET status=%(status)s WHERE status = %(status_old)s;'
-    >>> tup4[1]
-    {'status': 'done', 'status_old': 'in_progress'}
+    >>> sorted(tup4[1].items())
+    [('status', 'done'), ('status_old', 'in_progress')]
+
+    
 
     Table names are checked for invalid values:
     >>> update('evil.table;truncate table users', {'status': 'done'})[0]
@@ -1370,8 +1376,15 @@ def query(clause, *args, **kwargs):  # [ ---------- [ query ... [
     >>> query(txt,
     ...       query_data={  # BAD EXAMPLE!
     ...        'table1': 'users', 'table2': 'addresses',
-    ...        'filter': '%beeblebrox%'})
-    ('SELECT t1.user_id, t1.name, t2.address FROM %(table1)s t1 JOIN %(table2)s t2 ON t1.user_id = t2.user_id WHERE t1.name ILIKE %(filter)s;', {'table2': 'addresses', 'filter': '%beeblebrox%', 'table1': 'users'})
+    ...        'filter': '%beeblebrox%'})  # doctest: +NORMALIZE_WHITESPACE
+    ('SELECT t1.user_id, t1.name, t2.address
+      FROM %(table1)s t1
+      JOIN %(table2)s t2
+        ON t1.user_id = t2.user_id
+      WHERE t1.name ILIKE %(filter)s;',
+      {'table1': 'users',
+       'table2': 'addresses',
+       'filter': '%beeblebrox%'})
 
     The database adapter will probably replace the %(table1)s string by
     'users', but here a name is expected,

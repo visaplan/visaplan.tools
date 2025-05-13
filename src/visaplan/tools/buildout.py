@@ -10,13 +10,17 @@ version.
 # Python compatibility:
 from __future__ import absolute_import
 
-# backport for Python 3.7- (from PyPI):
-from importlib_metadata import PackageNotFoundError
-from importlib_metadata import version as pkg_version
-
 # Standard library:
 import sys
 from os.path import normpath, sep
+from re import compile as re_compile
+
+if sys.version_info[:2] >= (3, 8):
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as pkg_version
+else:
+    from importlib_metadata import PackageNotFoundError
+    from importlib_metadata import version as pkg_version
 
 # Local imports:
 from visaplan.tools.sequences import sequence_slide
@@ -128,6 +132,7 @@ def check_illegal_choice(value, name, choices):
                         'choose from %(choices)s'
                         % locals())
 
+_is_py_spec = re_compile('^py[1-9][.][0-9]+$').match
 
 def name_and_version_from_eggname(name):
     """
@@ -144,12 +149,27 @@ def name_and_version_from_eggname(name):
     Version suffixes are possible but are expected not to contain dashes:
     >>> f('visaplan.tools-1.2.2.dev1-py2.7.egg')
     ('visaplan.tools', '1.2.2.dev1')
+
+    >>> f('plone.app.content-2.1.7-py2.7-linux-x86_64.egg')
+    ('plone.app.content', '2.1.7')
     """
     if sep in name:
         raise ValueError('no path allowed! (%(name)r)' % locals())
     parts = name.split('-')
     if not parts[2:]:
         raise ValueError('%(name)r: 2 or more "-" expected' % locals())
+
+    pyi = None
+    i = 2
+    for chunk in parts[2:]:
+        if _is_py_spec(chunk):
+            pyi = i
+            break
+        else:
+            i += 1
+    if pyi is not None:
+        return ('-'.join(parts[0:pyi-1]),
+                parts[pyi-1])
     return ('-'.join(parts[0:-2]),
             parts[-2])
 
@@ -178,7 +198,7 @@ def extract_package_and_version(spec, invalid=VALUES_INVALID[0], logger=None):
     In such cases, if the first try fails, we try the direct child of 'eggs'
     as well:
     >>> epav('/opt/zope/common/eggs/Products.ATContentTypes-2.1.14'
-    ...      '-py2.7.egg/Products/ATContentTypes/thirdparty')
+    ...      '-py2.7.egg/Products/ATContentTypes/thirdparty') # doctest: +SKIP
     ('Products.ATContentTypes', '2.1.14')
     """
     chunks = normpath(spec).split(sep)
@@ -319,6 +339,7 @@ def checkPathForPackage(package, whitelist, path=None,
     ...          path=path,
     ...          logger=logger,
     ...          **kwargs)
+    ... # doctest: +FAIL_FAST
 
     Looking for a package which is present, version in whitelist:
     >>> cpfp('visaplan.tools')
@@ -430,7 +451,7 @@ def checkPathForPackage(package, whitelist, path=None,
                     return False
         except InvalidPathEntry as e:
             bogus_paths.append(pa)
-    del p, v
+        del p
     if bogus_paths:
         if logger is None:
             logger = getLogger('checkPathForPackage')

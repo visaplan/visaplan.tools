@@ -17,6 +17,10 @@ This is a collection of utility modules for Python projects.
 Features
 --------
 
+- ``batches`` module:
+
+  Support batches, generating (items, label) tuples
+
 - ``buildout`` module, for buildout_-built projects:
 
   Function ``checkPathForPackage`` to check a given package against a versions whitelist.
@@ -29,6 +33,10 @@ Features
 - ``classes`` module:
 
   Several simple but useful classes derived from Python dicts, e.g. ``Mirror`` and ``Proxy``
+
+- ``csvfiles`` module:
+
+  - provides an ``excel_ssv`` dialect (semicolon-separated)
 
 - ``dates`` module:
 
@@ -46,9 +54,12 @@ Features
 
   - functions related to files; for now ``make_mtime_checker``
 
-- ``html`` module:
+- ``htmlohmy`` module:
 
   - ``HtmlEntityProxy`` - a dict which returns unicode characters when given a named HTML entity
+
+  *(This module was named ``html`` in earlier releases up to 1.3.x but was
+  renamed due to import problems in Python 3.)*
 
 - ``http`` module:
 
@@ -57,6 +68,15 @@ Features
 - ``lands0`` module:
 
   - several tools to work with *lists and strings*
+
+- ``lock`` module:
+
+  - provide the `ConvenientLock` LockFile context manager, based on
+    zc.lockfile_; specify the ``lock`` extra to install the dependencies.
+
+- ``minicurr`` module:
+
+  - pretty minimal currency-related stuff
 
 - ``minifuncs`` module:
 
@@ -82,12 +102,19 @@ Features
 
   - functions related to date and/or time calculations
 
+- ``words`` module:
+
+  - A `head` function to extract the first N characters *or* words, trying to
+    avoid breaking words (strictly heuristically, for now).
+
 
 Documentation
 -------------
 
 The modules are documented by doctests.
 Apart from this, we don't have real user documentation yet (sorry).
+
+Some of the docstrings are written in German.
 
 
 Installation

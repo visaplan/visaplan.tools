@@ -2,6 +2,15 @@ Changelog
 =========
 
 
+2.0.0 (estimated)
+-----------------
+
+Breaking changes:
+
+- Drop Python 2 compatiblity.
+  (branch [py3-only])
+
+
 1.5.0 (estimated)
 -----------------
 
@@ -11,6 +20,41 @@ Breaking changes:
 
   - ``http_statustext``, because of questionable `func` option
   - ``make_url``
+
+
+1.4.0 (unreleased)
+------------------
+
+Breaking changes:
+
+- .html *module renamed* to .htmlohmy, because of trouble importing from ``html.entities``
+
+New Features:
+
+- `Python 3`_ compatibility (based on six_)
+
+- new module .lock to provide lock files support.
+
+  This requires zc.lockfile_ (v1.2.1+ recommended) and packaging_;
+  to have them installed, specify the ``lock`` extra.
+
+  **Note:** If you'd like to have the worker's names of your Zope or Plone
+  instance written to the lock files
+  (usually something like ``instance`` or ``client1``),
+  you'll probably need the respective module
+  of the visaplan.plone.tools_ package.
+
+Improvements:
+
+- .lands0.make_default_prefixer supports a list or tuple for the default_prefix
+  argument.
+- Packaging: *conditionally* require backport module `importlib-metadata`_
+
+Miscellaneous:
+
+- Added ``td``, ``th`` and ``caption`` to the set of `BLOCK_ELEMENT_NAMES`
+
+[tobiasherp]
 
 
 1.3.13 (2024-03-21)
@@ -459,7 +503,11 @@ New Features:
 .. _`context manager`: https://peps.python.org/pep-0343/
 .. _importlib_metadata: https://pypi.org/project/importlib-metadata/
 .. _`ISO 4217`: https://www.iso.org/iso-4217-currency-codes.html
+.. _packaging: https://pypi.org/project/packaging/
 .. _Python: https://www.python.org
+.. _`Python 3`: https://peps.python.org/pep-3000/
 .. _six: https://pypi.org/project/six
 .. _visaplan.plone.sqlwrapper: https://pypi.org/project/visaplan.plone.sqlwrapper
+.. _visaplan.plone.tools: https://pypi.org/project/visaplan.plone.tools
+.. _zc.lockfile: https://pypi.org/project/zc.lockfile
 .. _zope.deprecation: https://pypi.org/project/zope.deprecation

@@ -15,11 +15,12 @@ Breaking changes, estimated for future releases:
 
   (estimated for release 1.5.0)
  
-Bugs to be fixed:
+- `.htmlohmy.make_picture` function:
 
-- The `.html.make_picture` function currently creates ``srcset`` attributes with
-  width descriptors but no ``sizes`` attribute -- which is needed for the
-  ``srcset`` to be honored!
+  - Make it support ``<picture>`` elements with ``sizes`` attributes,
+    which will require to parse the `sizes` value.
+
+  - ``<img>`` elements should have ``width`` and ``height`` attributes!
 
 Other things to do:
 

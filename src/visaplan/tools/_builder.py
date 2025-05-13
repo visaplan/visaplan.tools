@@ -24,15 +24,16 @@ Let's use this as an example:
 
 But first we'll create a little test helper function:
 
+>>> from visaplan.tools.htmlohmy import _prefixed
 >>> def fpt(txt):
-...     return from_plain_text(txt, joiner=u' ').encode('utf-8')
->>> fpt(plain)                                 # doctest: +NORMALIZE_WHITESPACE
-    "<p> All we support is
+...     return _prefixed(from_plain_text(txt, joiner=u' '))
+>>> fpt(plain)       # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+    u'<p> All we support is
      <ul> <li> paragraphs
           <li> unordered lists (not nested)
           <li> hard linebreaks
      </ul>
-     <p> Let's use this as an example:"
+     <p> Let...s use this as an example:'
 
 Things demonstrated here:
 
@@ -48,39 +49,39 @@ Things demonstrated here:
 Now, into the details.
 
 >>> fpt(u'  ')
-''
+u''
 >>> fpt(u'A two-line\nparagraph')
-'<p> A two-line <br> paragraph'
+u'<p> A two-line <br> paragraph'
 >>> fpt(u'A paragraph\n  \nand a 2nd one')     # doctest: +NORMALIZE_WHITESPACE
-'<p> A paragraph
+u'<p> A paragraph
  <p> and a 2nd one'
 >>> fpt('\nImmer Ärger mit\n* Harry  \n* Sally')           # doctest: +ELLIPSIS
-'<p> Immer ...rger mit <ul> <li> Harry <li> Sally'
+u'<p> Immer ...rger mit <ul> <li> Harry <li> Sally'
 >>> fpt('''
 ... empty first
 ... and last lines
 ... + are skipped
 ... ''')
-'<p> empty first <br> and last lines <ul> <li> are skipped'
+u'<p> empty first <br> and last lines <ul> <li> are skipped'
 
 >>> fpt('''Trailing
 ... + whitespace  \t
 ... + is stripped   \t
 ... ''')
-'<p> Trailing <ul> <li> whitespace <li> is stripped'
+u'<p> Trailing <ul> <li> whitespace <li> is stripped'
 
 HTML special characters are escaped:
 >>> fpt('S & P')
-'<p> S &amp; P'
+u'<p> S &amp; P'
 >>> fpt('- S & P\n- visaplan\n- clever & smart')
-'<ul> <li> S &amp; P <li> visaplan <li> clever &amp; smart'
+u'<ul> <li> S &amp; P <li> visaplan <li> clever &amp; smart'
 
 >>> plain = u'''
 ... * foo
 ... * bar
 ... And now for something completely different ...'''
 >>> fpt(plain)                                 # doctest: +NORMALIZE_WHITESPACE
-    '<ul> <li> foo <li> bar </ul>
+    u'<ul> <li> foo <li> bar </ul>
      <p> And now for something completely different ...'
 
 """
@@ -91,7 +92,12 @@ from __future__ import absolute_import
 from six import string_types as six_string_types
 from six import text_type as six_text_type
 from six import unichr
-from six.moves.html_entities import name2codepoint
+
+from sys import version_info
+if version_info[0] <= 2:
+    from six.moves.html_entities import name2codepoint
+else:
+    from html.entities import name2codepoint
 
 # Standard library:
 from string import whitespace
@@ -122,8 +128,9 @@ except ImportError:
 
 class LineInfo(object):
     r"""
-    >>> sorted(BULLET_CHARS)
-    [u'*', u'+', u'-', u'\u2022']
+    >>> print(sorted(BULLET_CHARS))  # doctest: +FAIL_FAST
+    ['*', '+', '-', '•']
+
     >>> LineInfo(u'An ordinary paragraph.')
     <LineInfo('An ordinar...')>
 
@@ -200,7 +207,7 @@ class LineInfo(object):
                 add([u'\'', txt, u'\''])
         tail.append(u')>')
         liz.extend(tail)
-        return u''.join(liz).encode('utf-8')
+        return u''.join(liz)
 
 
 def from_plain_text(txt, joiner=u'', decode=None):
@@ -217,41 +224,42 @@ def from_plain_text(txt, joiner=u'', decode=None):
     there is no headlines support or other fancy stuff.
 
     For our tests, we use a little helper function:
+    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> def fpt(txt):
-    ...     return from_plain_text(txt, joiner=u' ').encode('utf-8')
+    ...     return _prefixed(from_plain_text(txt, joiner=u' '))
     >>> fpt(u'  ')
-    ''
+    u''
     >>> fpt(u'A two-line\nparagraph')
-    '<p> A two-line <br> paragraph'
+    u'<p> A two-line <br> paragraph'
     >>> fpt(u'A paragraph\n\nand a 2nd one')  # doctest: +NORMALIZE_WHITESPACE
-    '<p> A paragraph
+    u'<p> A paragraph
      <p> and a 2nd one'
     >>> fpt('\nImmer Ärger mit\n* Harry  \n* Sally')      # doctest: +ELLIPSIS
-    '<p> Immer ...rger mit <ul> <li> Harry <li> Sally'
+    u'<p> Immer ...rger mit <ul> <li> Harry <li> Sally'
     >>> fpt('''
     ... empty first
     ... and last lines
     ... + are skipped
     ... ''')
-    '<p> empty first <br> and last lines <ul> <li> are skipped'
+    u'<p> empty first <br> and last lines <ul> <li> are skipped'
 
     >>> fpt('''Trailing
     ... + whitespace  \t
     ... + is stripped   \t
     ... ''')
-    '<p> Trailing <ul> <li> whitespace <li> is stripped'
+    u'<p> Trailing <ul> <li> whitespace <li> is stripped'
 
     HTML special characters are escaped:
     >>> fpt('S & P')
-    '<p> S &amp; P'
+    u'<p> S &amp; P'
     >>> fpt('- S & P\n- visaplan\n- clever & smart')
-    '<ul> <li> S &amp; P <li> visaplan <li> clever &amp; smart'
+    u'<ul> <li> S &amp; P <li> visaplan <li> clever &amp; smart'
 
     Now for some special cases.
 
     Currently, we silently accept different bullet characters in a row:
     >>> fpt('- dashed list item,\n+ and one with a plus sign')
-    '<ul> <li> dashed list item, <li> and one with a plus sign'
+    u'<ul> <li> dashed list item, <li> and one with a plus sign'
 
     Currently we don't support nested lists; the amount of leading whitespace
     is ignored:
@@ -260,17 +268,17 @@ def from_plain_text(txt, joiner=u'', decode=None):
     ...   + sublist topic
     ...     - innermost topic
     ... ''')
-    '<ul> <li> main list topic <li> sublist topic <li> innermost topic'
+    u'<ul> <li> main list topic <li> sublist topic <li> innermost topic'
 
     Corner cases (strange input):
 
     Bullet points are recognised only if followed by text:
     >>> fpt('  *')
-    '<p> *'
+    u'<p> *'
     >>> fpt('  * ')
-    '<p> *'
+    u'<p> *'
     >>> fpt('  * A')
-    '<ul> <li> A'
+    u'<ul> <li> A'
 
     Leading whitespace is ignored, unless we are in a list; in this case, the
     current list item is continued:
@@ -282,7 +290,7 @@ def from_plain_text(txt, joiner=u'', decode=None):
     ...
     ...   After an empty line, we have a new paragraph.
     ...   ''')                                # doctest: +NORMALIZE_WHITESPACE
-    '<ul> <li> first item
+    u'<ul> <li> first item
                <br> continued after a line break
           <li> second item
     </ul>

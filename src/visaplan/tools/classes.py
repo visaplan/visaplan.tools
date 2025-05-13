@@ -7,12 +7,20 @@ Autor: Tobias Herp
 # Python compatibility:
 from __future__ import absolute_import
 
-from importlib_metadata import PackageNotFoundError
-from importlib_metadata import version as pkg_version
 from six import string_types as six_string_types
 
 # Standard library:
-from collections import Mapping
+from sys import version_info
+if version_info[:2] >= (3, 3):
+    from collections.abc import Mapping
+else:
+    from collections import Mapping
+if version_info[:2] >= (3, 8):
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as pkg_version
+else:
+    from importlib_metadata import PackageNotFoundError
+    from importlib_metadata import version as pkg_version
 from posixpath import normpath as normpath_posix
 
 # Local imports:
@@ -286,7 +294,7 @@ def Proxy(func, *args, **kwargs):
     ['e', 'i', 'n', 's', 'w', 'z']
     >>> len(p)
     1
-    >>> p.keys()
+    >>> sorted(p.keys())
     [('e', 'i', 'n', 's', 'w', 'z')]
     """
     aggressive = kwargs.pop('aggressive', False)
@@ -346,8 +354,10 @@ class DictOfSets(dict):
     True
 
     >>> done.add('abc123', 'published')
-    >>> done['published']
-    set(['abc123'])
+    >>> type(done['published'])  # doctest: +ELLIPSIS
+    <... 'set'>
+    >>> sorted(done['published'])
+    ['abc123']
     >>> not done
     False
     >>> len(done)
@@ -355,8 +365,10 @@ class DictOfSets(dict):
 
     Neue Schlüssel werden bei Bedarf erzeugt:
     >>> done.add('cde456', 'restricted')
-    >>> done['restricted']
-    set(['cde456'])
+    >>> type(done['restricted'])  # doctest: +ELLIPSIS
+    <... 'set'>
+    >>> sorted(done['restricted'])
+    ['cde456']
 
     Die "Länge" des Objekts entspricht der Summe der Längen der
     benannten Sets, wobei Mehrfachvorkommen von Elementen nicht
@@ -473,13 +485,16 @@ class RootsDict(DictOfSets):
     >>> rd.add('/pfad/ohne/slash', 'published')
 
     Die Einträge werden normalisiert;
-    >>> rd['published']
-    set([('', 'pfad', 'ohne', 'slash')])
+    >>> type(rd['published'])  # doctest: +ELLIPSIS
+    <... 'set'>
+    >>> list(rd['published'])
+    [('', 'pfad', 'ohne', 'slash')]
     >>> f = rd._check_item
     >>> fmt = lambda x: '/'.join(x)
     >>> sorted(map(f, '/pfad1/ /pfad2 /pfad1/unterverz'.split()))
     [('', 'pfad1'), ('', 'pfad1', 'unterverz'), ('', 'pfad2')]
-    >>> map(fmt, sorted(map(f, '/pfad1/ /pfad2 /pfad1/unterverz'.split())))
+    >>> list(map(fmt,
+    ...          sorted(map(f, '/pfad1/ /pfad2 /pfad1/unterverz'.split()))))
     ['/pfad1', '/pfad1/unterverz', '/pfad2']
 
     >>> rd.add('/pfad/ganz/woanders', 'visible')
@@ -490,8 +505,19 @@ class RootsDict(DictOfSets):
     >>> rd = RootsDict(['published', 'visible', 'restricted'])
     >>> rd.add('/pfad/ohne/slash', 'restricted')
     >>> rd.add('/pfad/ohne/slash', 'published')
-    >>> rd._cached_data()
-    ([('/pfad/ohne/slash', 100, 'published'), ('/pfad/ohne/slash', 98, 'restricted')], {'visible': 99, 'restricted': 98, 'published': 100}, {98: 'restricted', 99: 'visible', 100: 'published'})
+    >>> tuples, key2num, num2key = rd._cached_data()
+    >>> tuples # doctest: +NORMALIZE_WHITESPACE +REPORT_NDIFF
+    [('/pfad/ohne/slash', 100, 'published'),
+     ('/pfad/ohne/slash', 98, 'restricted')]
+    >>> sorted(key2num.items())  # doctest: +NORMALIZE_WHITESPACE
+    [('published', 100),
+     ('restricted', 98),
+     ('visible',    99)]
+
+    >>> sorted(num2key.items())  # doctest: +NORMALIZE_WHITESPACE
+    [(98, 'restricted'),
+     (99, 'visible'),
+    (100, 'published')]
     >>> rd.first_hit('/pfad/ohne/slash/mit/unterseite')
     'published'
 
@@ -603,7 +629,7 @@ def make_proxy(func, normalize=None):
     ['e', 'i', 'n', 's', 'w', 'z']
     >>> len(p)
     1
-    >>> p.keys()
+    >>> sorted(p.keys())
     [('e', 'i', 'n', 's', 'w', 'z')]
     """
 
@@ -811,6 +837,11 @@ class RecursiveMap(dict):
 
     >>> map.get('fumf', 5)
     5
+    >>> sorted(map.items()) # doctest: +NORMALIZE_WHITESPACE
+    [('drei', 'vier'),
+     ('eins', 'zwei'),
+     ('vier', 'vier'),
+     ('zwei', 'drei')]
     """
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
@@ -1226,8 +1257,8 @@ class ChangesCollector(dict):
     >>> chg2 = ChangesCollector({'whitelist': {'add': ['div'],
     ...                                        'remove': ['strong', 'img']}})
     >>> chg1.update(chg2)
-    >>> sorted(chg1.frozen(orig).items())
-    [('whitelist', ['body', 'p', 'div'])]
+    >>> {key: sorted(val) for key, val in chg1.frozen(orig).items()}
+    {'whitelist': ['body', 'div', 'p']}
 
     We expect all keys to be strings:
     >>> ChangesCollector({42: 'The answer'})

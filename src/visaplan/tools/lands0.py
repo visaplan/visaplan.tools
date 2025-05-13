@@ -13,8 +13,13 @@ from six.moves import range
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
-# Standard library:
-from string import strip
+from sys import version_info
+if version_info[0] <= 2:
+    # Standard library:
+    from string import strip
+else:
+    def strip(s, *args, **kw):
+        return s.strip(*args, **kw)
 
 try:
     # Standard library:
@@ -489,15 +494,32 @@ def makeSet(s, **kwargs):
     daß als default explizit ein Nicht-Set übergeben wurde)
 
     >>> s = '\n  \n zwei drei \n \n'
-    >>> makeSet(s)
-    set(['zwei drei'])
-    >>> makeSet('  ')
-    set([])
-    >>> makeSet(None)
-    set([])
-    >>> makeSet('  ', default=None)
-    >>> makeSet(42)
-    set([42])
+    >>> s1 = makeSet(s)
+    >>> isinstance(s1, set)
+    True
+    >>> sorted(s1)
+    ['zwei drei']
+
+    This creates an empty set:
+    >>> s2 = makeSet('  ')
+    >>> isinstance(s2, set)
+    True
+    >>> not s2
+    True
+
+    >>> s3 = makeSet(None)
+    >>> isinstance(s3, set)
+    True
+    >>> not s3
+    True
+
+    >>> s42 = makeSet(42)
+    >>> sorted(s42)
+    [42]
+
+    >>> s5 = makeSet('  ', default=None)
+    >>> s5 is None
+    True
     """
     try:
         default = kwargs.pop('default')
@@ -612,12 +634,49 @@ def make_default_prefixer(default_prefix, other_prefixes=None):
     'simple_prefixer'
     >>> make_default_prefixer('a-', ['a-']).__name__
     'simple_prefixer'
+
+    Anwendung für Katalogsuche:
+    >>> prefixed_path = make_default_prefixer('/unitracc')
+    >>> prefixed_path('/know-how')
+    '/unitracc/know-how'
+    >>> prefixed_path('/unitracc/temp')
+    '/unitracc/temp'
+
+    Wenn das übergebene Argument allerdings nicht mit einem Slash beginnt,
+    bekommen wir Müll zurück:
+    >>> prefixed_path('know-how')
+    '/unitraccknow-how'
+
+    Das können wir vermeiden, indem wir eine Liste nacheinander zu verwendender
+    Präfixe angeben:
+    >>> prefixed_path = make_default_prefixer(['/', '/unitracc'])
+    >>> prefixed_path('know-how')
+    '/unitracc/know-how'
+
+    Die Reihenfolge ist hierbei wichtig:
+    >>> make_default_prefixer(['/unitracc', '/'])('know-how')
+    '/unitraccknow-how'
     """
 
     def simple_prefixer(s):
         if s.startswith(default_prefix):
             return s
         return default_prefix + s
+
+    if isinstance(default_prefix, (list, tuple)):
+        a_p = tuple(default_prefix)
+        if other_prefixes is not None:
+            raise TypeError('With default_prefix being a list (or tuple), '
+                            'other_prefixes must be None!')
+        empty = [p for p in a_p if not p]
+        if empty:
+            raise ValueError('Prefixes must not be empty!')
+        def cumulating_prefixer(s):
+            for p in a_p:
+                if not s.startswith(p):
+                    s = p + s
+            return s
+        return cumulating_prefixer
 
     if other_prefixes:
         a_p = [default_prefix]

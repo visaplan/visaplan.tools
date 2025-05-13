@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*- vim: ts=8 sts=4 sw=4 si et tw=79
 r"""
-visaplan.tools.html: classes, functions and data for HTML support
+visaplan.tools.htmlohmy: classes, functions and data for HTML support
+
+(This module was renamed to avoid import problems in Python 3)
 
 The `entity` object -- an `HtmlEntityProxy` instance -- resolves mnemonic entity
 names to Unicode characters::
 
-    >>> entity['uuml']
-    u'\xfc'
-    >>> print(entity['uuml'])  # doctest: +SKIP
-    ...                        #          (because of normalization problem)
+    >>> print(entity['uuml'])
     ü
 
 The `entity_aware` function generates the characters in a string which contains
@@ -37,6 +36,15 @@ elements with srcset attributes) for simple standard cases::
     >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
     '<img srcset="/++images++/babyface-300.jpg 300w,
                   /++images++/babyface-600.jpg 600w"
+          sizes="100vw"
+          src="/++images++/babyface-300.jpg"
+          alt="">'
+    >>> make_picture(widths=(300,), **kw)
+    ... # (it currently creates a srcset attributes for a single width as well
+    ... # which doesn't look very clever and may be changed; thus we skip this
+    ... # doctest:                                  +NORMALIZE_WHITESPACE +SKIP
+    '<img srcset="/++images++/babyface-300.jpg 300w"
+          sizes="100vw"
           src="/++images++/babyface-300.jpg"
           alt="">'
 
@@ -49,27 +57,18 @@ supporting paragraphs and unordered lists:
     ...
     ... And now for something completely different %(hellip)s'''
     ... ) % entity
-    >>> print(plain.encode('utf-8'))
+    >>> print(plain.encode('utf-8'))  # doctest: +SKIP
+    ... # (in Python 3, the bytes value is treated differently)
     <BLANKLINE>
     • foo
     • bar
     <BLANKLINE>
     And now for something completely different …
-    >>> from_plain_text(plain,
-    ...                joiner=u' ')            # doctest: +NORMALIZE_WHITESPACE
-    u'<ul> <li> foo <li> bar
-     </ul>
-      <p> And now for something completely different \u2026'
-
-    >>> from_plain_text(u'''
-    ... %(bull)s foo
-    ... %(bull)s bar
-    ...
-    ... And now for something completely different %(hellip)s'''
-    ... % entity, joiner=u' ')                 # doctest: +NORMALIZE_WHITESPACE
-    u'<ul> <li> foo <li> bar
-     </ul>
-      <p> And now for something completely different \u2026'
+    >>> print(from_plain_text(plain,
+    ...                joiner=u' '))           # doctest: +NORMALIZE_WHITESPACE
+    <ul> <li> foo <li> bar
+    </ul>
+    <p> And now for something completely different …
 
 """
 
@@ -78,12 +77,9 @@ from __future__ import absolute_import, print_function
 
 from six import text_type as six_text_type
 from six import unichr
-from six.moves.html_entities import name2codepoint
 
-# Standard library:
-from codecs import BOM_UTF8
-from string import whitespace
-
+# IMPORTANT: This must come FIRST (before the name2codepoint import);
+#            otherwise we had a strange import error in Python 3.6!
 try:
     # Standard library:
     from html import escape as html_escape
@@ -92,6 +88,16 @@ except ImportError:
     from cgi import escape as cgi_escape
     def html_escape(s):
         return cgi_escape(s, quote=1)
+
+from sys import version_info
+if version_info[0] <= 2:
+    from six.moves.html_entities import name2codepoint
+else:
+    from html.entities import name2codepoint
+
+# Standard library:
+from codecs import BOM_UTF8
+from string import whitespace
 
 # Local imports:
 from visaplan.tools._builder import from_plain_text
@@ -106,6 +112,33 @@ __all__ = [
     # 'collapse_whitespace',
     ]
 
+class _prefixed(object):
+    """
+    little doctest helper ...
+    We'll get a 'u' prefix in Python 3:
+
+    >>> _prefixed(u'a')
+    u'a'
+    """
+    def __init__(self, val):
+        self.val = val
+
+    def __repr__(self):
+        val = self.val
+        if isinstance(val, list):
+            return [_prefixed(item) for item in val]
+        elif isinstance(val, tuple):
+            return tuple(_prefixed(item) for item in val)
+        res = repr(val)
+        if isinstance(val, six_text_type):
+            if not res.startswith('u'):
+                return 'u'+res
+        elif isinstance(val, bytes):
+            if not res.startswith('b'):
+                return 'b'+res
+        return res
+
+
 # ------------------------------------------------------ [ Daten ... [
 # Blockelemente: hier als solche Elemente verstanden, die in einem <p>, <span>
 # oder <a> nicht vorkommen dürfen
@@ -115,6 +148,10 @@ BLOCK_ELEMENT_NAMES = set([
     'dl', 'ol', 'ul',
     'dt', 'dd',
     'table', # strenggenommen, lt. CSS 2.1: display: table
+    'td', 'th', 'caption',
+    # semantic HTML:
+    'main', 'aside',
+    'figure', 'figcaption',
     ])
 # <http://www.cs.tut.fi/~jkorpela/html/empty.html#html>:
 EMPTY_ELEMENT_NAMES = set([
@@ -147,18 +184,20 @@ class HtmlEntityProxy(dict):
     r"""
     Zum schnellen und korrekten Zugriff auf symbolische HTML-Entitys
 
-    >>> entity['nbsp']
+    >>> _prefixed(entity['nbsp'])
     u'\xa0'
 
     Wird im Buchungsmodul verwendet (../browser/booking/utils.py):
-    >>> entity['euro']
+    >>> _prefixed(entity['euro'])
     u'\u20ac'
+    >>> print(entity['euro'])
+    €
 
     Um z. B. Breadcrumbs zu erzeugen:
     >>> divider = u' %(rarr)s ' % entity
-    >>> divider
+    >>> _prefixed(divider)
     u' \u2192 '
-    >>> divider.join((u'eins', u'zwei', u'drei'))
+    >>> _prefixed(divider.join((u'eins', u'zwei', u'drei')))
     u'eins \u2192 zwei \u2192 drei'
     """
     def __getitem__(self, key):
@@ -317,15 +356,15 @@ def collapse_whitespace(s, preserve_edge=True):
                     wenn False, wird er entfernt.
 
     >>> html = '  <div> <p>  Bla\n  Blubb  </p> </div>  '
-    >>> collapse_whitespace(html)
+    >>> _prefixed(collapse_whitespace(html))
     u' <div> <p> Bla Blubb </p> </div> '
-    >>> collapse_whitespace(html, preserve_edge=False)
+    >>> _prefixed(collapse_whitespace(html, preserve_edge=False))
     u'<div> <p> Bla Blubb </p> </div>'
     >>> footertxt = ('http://www.unitracc.de'
     ...              ' %(nbsp)s|%(nbsp)s '
     ...              'http://www.unitracc.com'
     ...              ) % entity
-    >>> collapse_whitespace(footertxt)
+    >>> _prefixed(collapse_whitespace(footertxt))
     u'http://www.unitracc.de | http://www.unitracc.com'
 
     >>> html2=(u'<!DOCTYPE html>\n\n<html>\n    <body>\n        <p>\n'
@@ -335,7 +374,7 @@ def collapse_whitespace(s, preserve_edge=True):
     ... u'href="https://dev-de.unitracc.deknow-how/fachbuecher/demo-leitfaden-mikrotunnelbau/export_view">'
     ... u'https://dev-de.unitracc.deknow-how/fachbuecher/demo-leitfaden-mikrotunnelbau/export_view</a> '
     ... u'herunterladen.</p>\n        \n    </body>\n</html>\n\n')
-    >>> collapse_whitespace(html2, preserve_edge=False)
+    >>> _prefixed(collapse_whitespace(html2, preserve_edge=False))
     u'<!DOCTYPE html> <html> <body> <p> Sehr geehrte(r) Tobias Herp, </p> <p>Ihr gew\xfcnschter PDF-Export von \u201eHurz\u201c ist abgeschlossen. Sie k\xf6nnen ihn unter <a href="https://dev-de.unitracc.deknow-how/fachbuecher/demo-leitfaden-mikrotunnelbau/export_view">https://dev-de.unitracc.deknow-how/fachbuecher/demo-leitfaden-mikrotunnelbau/export_view</a> herunterladen.</p> </body> </html>'
 
     Achtung: die Unterstützung des charset-Arguments wurde hier vorsätzlich
@@ -366,14 +405,17 @@ def _unicode_without_bom(s, charset='utf-8'):
     Gib die übergebene Zeichenkette als Unicode-String zurück
     und entferne eine etwaige Byte-Order-Markierung (BOM; vim: set bomb?)
 
-    >>> _unicode_without_bom('abc')
+    >>> _prefixed(_unicode_without_bom('abc'))
     u'abc'
-    >>> BOM_UTF8
-    '\xef\xbb\xbf'
-    >>> _unicode_without_bom('\xef\xbb\xbfÄh')
-    u'\xc4h'
-    >>> _unicode_without_bom(u'def')
+    >>> _prefixed(BOM_UTF8)
+    b'\xef\xbb\xbf'
+    >>> _prefixed(_unicode_without_bom(u'def'))
     u'def'
+
+    This test doesn't currently work in Python 3.6:
+
+    >>> print(_unicode_without_bom('\xef\xbb\xbfÄh'))  # doctest: +SKIP
+    u'\xc4h'
     """
     if isinstance(s, six_text_type):
         return s
@@ -407,14 +449,19 @@ def make_picture(**kw):
     >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
     '<img srcset="/++images++/babyface-300.jpg 300w,
                   /++images++/babyface-600.jpg 600w"
+          sizes="100vw"
           src="/++images++/babyface-300.jpg"
           alt="">'
+
+    We didn't specify that 'sizes' value; it was chosen as the default value
+    because the srcset attribute would probably be ignored otherwise.
 
     We can choose the largest size instead:
     >>> kw['use_largest'] = True
     >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
     '<img srcset="/++images++/babyface-300.jpg 300w,
                   /++images++/babyface-600.jpg 600w"
+          sizes="100vw"
           src="/++images++/babyface-600.jpg"
           alt="">'
 
@@ -425,6 +472,7 @@ def make_picture(**kw):
     '<img srcset="/++images++/babyface-300.jpg 300w,
                   /++images++/babyface-450.jpg 450w,
                   /++images++/babyface-600.jpg 600w"
+          sizes="100vw"
           src="/++images++/babyface-450.jpg"
           alt="">'
 
@@ -442,7 +490,8 @@ def make_picture(**kw):
     >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
     '<a href="/some/fancy/link/">
     <img srcset="/++images++/babyface-300.jpg 300w,
-                  /++images++/babyface-600.jpg 600w"
+                 /++images++/babyface-600.jpg 600w"
+         sizes="100vw"
          src="/++images++/babyface-300.jpg"
          alt="">
     </a>'
@@ -454,7 +503,8 @@ def make_picture(**kw):
     ...              **kw)                     # doctest: +NORMALIZE_WHITESPACE
     '<a href="/some/fancy/link/">
     <img srcset="/++images++/babyface-300.jpg 300w,
-                  /++images++/babyface-600.jpg 600w"
+                 /++images++/babyface-600.jpg 600w"
+         sizes="100vw"
          src="/++images++/babyface-300.jpg"
          alt=""
          class="img-responsive">
@@ -466,6 +516,7 @@ def make_picture(**kw):
     '<a href="/some/fancy/link/">
     <img srcset="/++images++/babyface-300.jpg 300w,
                   /++images++/babyface-600.jpg 600w"
+         sizes="100vw"
          src="/++images++/babyface-300.jpg"
          alt=""
          title="Some fancy image">
@@ -477,7 +528,8 @@ def make_picture(**kw):
     >>> make_picture(**kw2)                    # doctest: +NORMALIZE_WHITESPACE
     '<img srcset="/++thumbnail++/abc123-180.jpg 180w,
                   /++thumbnail++/abc123-240.jpg 240w"
-             src="/++thumbnail++/abc123-180.jpg"
+          sizes="100vw"
+          src="/++thumbnail++/abc123-180.jpg"
           alt="">'
 
     To use a `name` option, which might be more convenient in a loop:
@@ -491,8 +543,9 @@ def make_picture(**kw):
     ...              **kw2)                    # doctest: +NORMALIZE_WHITESPACE
     '<img srcset="/++thumbnail++/cde456-180.jpg 180w,
                   /++thumbnail++/cde456-240.jpg 240w"
-             src="/++thumbnail++/cde456-180.jpg"
-        alt="">'
+          sizes="100vw"
+          src="/++thumbnail++/cde456-180.jpg"
+          alt="">'
 
     If giving a `rel`, we need to have an `href` as well:
     >>> make_picture(name='abc123',
@@ -509,7 +562,8 @@ def make_picture(**kw):
         rel="uid-abc123">
       <img srcset="/++thumbnail++/abc123-180.jpg 180w,
                    /++thumbnail++/abc123-240.jpg 240w"
-              src="/++thumbnail++/abc123-180.jpg"
+           sizes="100vw"
+           src="/++thumbnail++/abc123-180.jpg"
            alt="">
     </a>'
 
@@ -527,6 +581,7 @@ def make_picture(**kw):
     >>> make_picture(name=uid, src=uid, **kw3)
     ...                                        # doctest: +NORMALIZE_WHITESPACE
     '<img srcset="/++thumbnail++/abc123-120.jpg 120w"
+          sizes="100vw"
           src="/++thumbnail++/abc123"
           alt="">'
 
@@ -536,8 +591,9 @@ def make_picture(**kw):
     ...                                        # doctest: +NORMALIZE_WHITESPACE
     '<a href="/oh/anywhere/@@ppt_view?uid=uid-abc123">
      <img srcset="/++thumbnail++/abc123-120.jpg 120w"
-             src="/++thumbnail++/abc123"
-             alt="">
+          sizes="100vw"
+          src="/++thumbnail++/abc123"
+          alt="">
      </a>'
 
     We want a "rel" attribute:
@@ -547,8 +603,9 @@ def make_picture(**kw):
     '<a href="/oh/anywhere/@@ppt_view?uid=uid-abc123"
         rel="uid=uid-abc123">
      <img srcset="/++thumbnail++/abc123-120.jpg 120w"
-             src="/++thumbnail++/abc123"
-             alt="">
+          sizes="100vw"
+          src="/++thumbnail++/abc123"
+          alt="">
      </a>'
 
     And an ID:
@@ -559,8 +616,9 @@ def make_picture(**kw):
         id="foil-42"
         rel="uid=uid-abc123">
      <img srcset="/++thumbnail++/abc123-120.jpg 120w"
-             src="/++thumbnail++/abc123"
-             alt="">
+          sizes="100vw"
+          src="/++thumbnail++/abc123"
+          alt="">
      </a>'
 
     Our image should be responsive:
@@ -572,9 +630,10 @@ def make_picture(**kw):
         id="foil-42"
         rel="uid=uid-abc123">
      <img srcset="/++thumbnail++/abc123-120.jpg 120w"
-             src="/++thumbnail++/abc123"
-             alt=""
-             class="img-responsive">
+          sizes="100vw"
+          src="/++thumbnail++/abc123"
+          alt=""
+          class="img-responsive">
      </a>'
 
     For this to work, we need an outer class as well, e.g.:
@@ -587,9 +646,10 @@ def make_picture(**kw):
         id="foil-42"
         rel="uid=uid-abc123">
      <img srcset="/++thumbnail++/abc123-120.jpg 120w"
-             src="/++thumbnail++/abc123"
-             alt=""
-             class="img-responsive">
+          sizes="100vw"
+          src="/++thumbnail++/abc123"
+          alt=""
+          class="img-responsive">
      </a>'
 
     >>> kw3['alt'] = 'Foil 42'
@@ -600,9 +660,10 @@ def make_picture(**kw):
         id="foil-42"
         rel="uid=uid-abc123">
      <img srcset="/++thumbnail++/abc123-120.jpg 120w"
-             src="/++thumbnail++/abc123"
-             alt="Foil 42"
-             class="img-responsive">
+          sizes="100vw"
+          src="/++thumbnail++/abc123"
+          alt="Foil 42"
+          class="img-responsive">
      </a>'
 
     Let's put together the options we have used:
@@ -648,15 +709,17 @@ def make_picture(**kw):
         id="foil-42"
         rel="uid=uid-abc123">
      <img srcset="/++thumbnail++/abc123-120.jpg 120w"
-             src="/++thumbnail++/abc123"
-             alt="Foil 42"
-             class="img-responsive">
+          sizes="100vw"
+          src="/++thumbnail++/abc123"
+          alt="Foil 42"
+          class="img-responsive">
      </a>'
 
     Those of us who have created responsive images before
     will wonder about the sizes attribute.
     If missing, and if the srcset contains width specification,
-    the default value is '100vw'; but we can specify something else, of course:
+    we inject a default value of '100vw', as seen above;
+    but we can specify something else, of course:
 
     >>> kw['sizes'] = '(max-width: 500px) 100vw, 50vw'
     >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
@@ -672,7 +735,7 @@ def make_picture(**kw):
     >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
     '<a href="/some/fancy/link/">
     <img srcset="/++images++/babyface-300.jpg 300w,
-                  /++images++/babyface-600.jpg 600w"
+                 /++images++/babyface-600.jpg 600w"
          sizes="(max-width: 500px) 100vw, 50vw"
          src="/++images++/babyface-300.jpg"
          alt=""
@@ -711,8 +774,16 @@ def make_picture(**kw):
     Traceback (most recent call last):
       ...
     ValueError: We don't support <picture ...> elements with "sizes" specifications yet!
-    >>> del kw['sizes']
-    >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
+
+    Pity. In such cases, we'd need to create multiple <source> elements and
+    spread the sizes value to 'media' and 'sizes' attributes,
+    which is sadly not yet implemented.
+    
+    We can suppress the sizes attribute by specifying a non-None
+    falsy value:
+    >>> kw['sizes'] = 0
+    >>> make_picture(widths=(300, 600), **kw)
+    ...                                  # doctest: +NORMALIZE_WHITESPACE -SKIP
     '<a href="/some/fancy/link/">
     <picture>
     <source srcset="/++images++/babyface-300.webp 300w,
@@ -902,7 +973,7 @@ def make_picture(**kw):
         for prev_width, width, next_width in sequence_slide(widths):
             if prev_width is None:
                 smallest = width
-            if width <= prev_width:
+            elif width <= prev_width:
                 raise ValueError('Currently we expect the widths in ascending'
                                  ' order! (%(prev_width)r < %(width)r)'
                                  % locals())
@@ -943,9 +1014,15 @@ def make_picture(**kw):
     fancy_attributes = []
     if srcset:
         fancy_attributes.append(('srcset', ', '.join(srcset)))
+        if sizes is None:
+            sizes = '100vw'
+        elif not sizes:
+            sizes = None
         if sizes and not need_picture:
             fancy_attributes.append(('sizes', sizes))
         elif sizes:
+            # we'd need multiple <source> elements, splitting the sizes value
+            # and separate the media queries in 'media' attributes
             raise ValueError("We don't support <picture ...> elements "
                     'with "sizes" specifications yet!')
     if need_picture:
@@ -1050,36 +1127,6 @@ def _pop_two_joiners(dic):
 
 
 if __name__ == '__main__':
-  if 0:
-      from pdb import set_trace; set_trace()
-      generator = entity_aware('Au&#195;&#159;en')
-      res = list(generator)
-      print(res)
-  elif 0:
-      from pdb import set_trace; set_trace()
-      kw2 = {'source_mask': '%(name)s-%(width)d.jpg', 'prefix':
-      '/++thumbnail++/', 'widths': (180, 240),
-      'name': 'abc123', 'rel': 'uid-abc123',
-      'joiner': ' '}
-      print(make_picture(**kw2))
-  elif 0:
-      from pdb import set_trace; set_trace()
-      kw3 = dict([('alt', 'Foil 42'),
-       ('href',         '/oh/anywhere/@@ppt_view?uid=uid-abc123'),
-       ('id',           'foil-42'),
-       ('img_class',    'img-responsive'),
-       ('img_mask',     ''),
-       ('joiner',       ' '),
-       ('outer_class',  'col-lg-2 col-md-3 col-sm-4 col-xs-6'),
-       ('prefix',       '/++thumbnail++/abc123'),
-       ('rel',          'uid=uid-abc123'),
-       ('source_mask',  '-%(width)d.jpg'),
-       ('src',          'abc123'),
-       ('widths',       (120,)),
-       ])
-      print(make_picture(**kw3))
-
-  else:
     # Standard library:
     import doctest
     doctest.testmod()

@@ -71,6 +71,7 @@ VERSION = read_version('VERSION',
 # ------------------------------------------- [ for setup_kwargs ... [
 long_description = '\n\n'.join([
     open('README.rst').read(),
+    open('COMPATIBILITY.rst').read(),
     open('TODO.rst').read(),
     open('CONTRIBUTORS.rst').read(),
     open('CHANGES.rst').read(),
@@ -171,10 +172,21 @@ setup_kwargs = dict(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'setuptools',
-        'importlib_metadata',
+        'setuptools >=36.2',
+        'importlib_metadata <3; python_version <"3.6"', # 3.0.0 requires Python 3.6
+        'importlib_metadata; python_version>="3.6" and python_version<"3.8"',
         'six',
     ],
+    extras_require={
+        'lock': [
+            # packaging v21.0 dropped Python 2.7, 3.4, 3.5 support:
+            'packaging <21; python_version <"3.6"', 
+            'packaging; python_version >="3.6"', 
+            # zc.lockfile v3.0 lacked the python_requires constraint: 
+            'zc.lockfile <3; python_version <"3.6"',
+            'zc.lockfile; python_version >="3.6"',
+            ],
+    },
 )
 if 0:
     from pprint import pprint

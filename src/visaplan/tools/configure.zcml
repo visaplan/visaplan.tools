@@ -1,0 +1,16 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope">
+    <!-- [ Modules of this Product ... [ -->
+    <include package=".classes" />
+    <include package=".coding" />
+    <include package=".debug" />
+    <include package=".dicts" />
+    <include package=".files" />
+    <include package=".html" />
+    <include package=".http" />
+    <include package=".lands0" />
+    <include package=".minifuncs" />
+    <include package=".sequences" />
+    <include package=".times" />
+    <!-- ] ... Modules of this Product ] -->
+</configure>

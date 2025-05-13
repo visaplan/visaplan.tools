@@ -6,6 +6,29 @@ from __future__ import absolute_import
 
 from six.moves.urllib.parse import urlsplit, urlunsplit
 
+import pkg_resources
+
+try:
+    pkg_resources.get_distribution('zope.deprecation')
+except pkg_resources.DistributionNotFound:
+    if __name__ != '__main__':
+        raise
+    HAS_ZOPEDEPRECATION = False
+    print('*** zope.deprecation not installed!')
+else:
+    HAS_ZOPEDEPRECATION = True
+    from zope.deprecation import deprecated
+    deprecated(
+        'http_statustext',
+        'The optional func argument is pretty fishy; '
+        'with modern Python versions the function shouldn\'t be necessary '
+        'anyway.'
+        '\nWill be removed in release 1.5.0.')
+    deprecated(
+        'make_url',
+        'The function doesn\'t satisfy the promise suggested by the name;'
+        '\nwill be removed in release 1.5.0.')
+
 try:
     # Python compatibility:
     from six.moves.http_client import responses as http_responses
@@ -59,6 +82,13 @@ except ImportError:
         505: 'HTTP Version Not Supported',
     }
 
+__all__ = [
+    'extract_hostname',  # forgiving hostname extractor for invalid URLs
+    # deprecated:
+    'http_statustext',  # accepts a questionable func option
+    'make_url',  # amend the 'http:' scheme if none is contained
+    ]
+
 
 def http_statustext(code, func=None):
     """
@@ -100,6 +130,7 @@ def make_url(s):
     # Wenn das Ergebnis jetzt noch ungültig ist,
     # wird es eben beim Test auffallen ...
     return s
+
 
 def extract_hostname(url):
     """

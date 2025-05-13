@@ -2,13 +2,47 @@ Changelog
 =========
 
 
-2.0.0 (2021-01-05)
-------------------
+2.0.0 (estimated)
+-----------------
 
 - Breaking changes:
 
   - Signature change (e.g. name of first argument: ``form`` --> ``dic``) for
     ``dicts.update_dict``.
+
+
+1.5.0 (estimated)
+-----------------
+
+Breaking changes:
+
+- Remove deprecated ``.http`` functions:
+
+  - ``http_statustext``, because of questionable `func` option
+  - ``make_url``
+
+[tobiasherp]
+
+
+1.3.3 (2021-01-12)
+------------------
+
+Bugfixes:
+
+- ``.sql.subdict_ne`` had failed with TypeError exceptions
+  if the checked form data contained list values.
+
+Miscellaneous:
+
+- The following ``.http`` functions are deprecated:
+
+  - ``http_statustext``, because of questionable `func` option
+  - ``make_url``, because it doesn't satisfy the promise suggested by the name.
+
+  With zope.deprecation_ installed, there will be a deprecation warning
+  issued on first use.
+
+[tobiasherp]
 
 
 1.3.2 (2021-01-05)
@@ -260,3 +294,4 @@ New Features:
 .. _collections-extended: https://pypi.org/project/collections-extended
 .. _six: https://pypi.org/project/six
 .. _visaplan.plone.sqlwrapper: https://pypi.org/project/visaplan.plone.sqlwrapper
+.. _zope.deprecation: https://pypi.org/project/zope.deprecation

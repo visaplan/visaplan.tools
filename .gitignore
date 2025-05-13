@@ -130,6 +130,7 @@ pip-selfcheck.json
 # visaplan environment
 auto.msg*
 tools/
+!src/visaplan/tools/
 update-module
 init
 init.vim

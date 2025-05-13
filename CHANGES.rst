@@ -2,13 +2,24 @@ Changelog
 =========
 
 
-2.0.0 (unreleased)
+2.0.0 (2021-01-05)
 ------------------
 
 - Breaking changes:
 
   - Signature change (e.g. name of first argument: ``form`` --> ``dic``) for
     ``dicts.update_dict``.
+
+
+1.3.2 (2021-01-05)
+------------------
+
+Bugfixes:
+
+- ``.sql.subdict_ne`` had failed with `TypeError` exceptions
+  if the checked form data contained list values.
+
+[tobiasherp]
 
 
 1.3.1 (2020-12-16)

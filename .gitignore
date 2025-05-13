@@ -129,6 +129,7 @@ pip-selfcheck.json
 
 # visaplan environment
 auto.msg*
+all-versioned.md5
 tools/
 !src/visaplan/tools/
 update-module

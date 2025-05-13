@@ -497,6 +497,7 @@ for part in $PARTS; do
 done
 if [ -z "$DONE_ANYTHING" ]; then
 	err "Nichts zu tun!"
+	exit 1
 fi
 # Abschließend die üblichen Konflikte bereinigen:
 CONFLICTS=$(conflicted-only) || CONFLICTS='ERROR'

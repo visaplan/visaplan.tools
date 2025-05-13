@@ -24,6 +24,23 @@ Breaking changes:
 [tobiasherp]
 
 
+1.3.6 (2021-10-06)
+------------------
+
+New Features:
+
+- ``.words`` module, providing a ``head`` function
+
+[tobiasherp]
+
+
+1.3.5.post2 (2021-10-01)
+------------------------
+
+Corrected changes list.
+[tobiasherp]
+
+
 1.3.5 (2021-09-07)
 ------------------
 
@@ -44,6 +61,13 @@ New Features:
 [tobiasherp]
 
 
+1.3.4.post2 (2021-10-01)
+------------------------
+
+Corrected changes list.
+[tobiasherp]
+
+
 1.3.4 (2021-03-24)
 ------------------
 
@@ -54,13 +78,15 @@ New Features:
 [tobiasherp]
 
 
+1.3.3.post2 (2021-10-01)
+------------------------
+
+Corrected changes list.
+[tobiasherp]
+
+
 1.3.3 (2021-01-12)
 ------------------
-
-Bugfixes:
-
-- ``.sql.subdict_ne`` had failed with TypeError exceptions
-  if the checked form data contained list values.
 
 Miscellaneous:
 

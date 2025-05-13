@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import six
+from six import text_type as six_text_type
 from six import unichr
 from six.moves.html_entities import name2codepoint
 
@@ -84,7 +85,7 @@ class HtmlEntityProxy(dict):
 
 
 entity = HtmlEntityProxy()
-WHITESPACE = set(six.text_type(whitespace))
+WHITESPACE = set(six_text_type(whitespace))
 # print sorted(WHITESPACE)
 for entity_name in WHITESPACE_ENTITY_NAMES:
     WHITESPACE.add(entity[entity_name])
@@ -153,7 +154,7 @@ def _unicode_without_bom(s, charset='utf-8'):
     >>> _unicode_without_bom(u'def')
     u'def'
     """
-    if isinstance(s, six.text_type):
+    if isinstance(s, six_text_type):
         return s
     # BOM-Präfix ist kein Unicode, sondern eine Bytes-Folge
     # --> implizit ausgelöste Decodierung von s

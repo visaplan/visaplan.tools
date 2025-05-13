@@ -7,6 +7,7 @@ Coding/Decoding tools
 from __future__ import absolute_import, print_function
 
 import six
+from six import text_type as six_text_type
 from six.moves import map
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
@@ -98,7 +99,7 @@ def make_safe_decoder(preferred='utf-8', preflist=None, errors='replace',
         """
         Nimm einen beliebigen Basestring und gib ihn als Unicode zurück
         """
-        if isinstance(s, six.text_type):
+        if isinstance(s, six_text_type):
             return s
         for encoding in preflist:
             try:
@@ -117,7 +118,7 @@ def make_safe_decoder(preferred='utf-8', preflist=None, errors='replace',
         """
         try:
             res = None
-            if isinstance(s, six.text_type):
+            if isinstance(s, six_text_type):
                 res = s
             else:
                 for encoding in preflist:
@@ -224,7 +225,7 @@ def safe_encode(s, charset='utf-8', errors='strict'):
     if not s:
         return ''
     # schon ein codierter String: einfach verwenden
-    if not isinstance(s, six.text_type):
+    if not isinstance(s, six_text_type):
         return s
     try:
         return s.encode(charset, 'strict')
@@ -251,7 +252,7 @@ def make_safe_encoder(charset='utf-8', errors='replace',
         if not s:
             return ''
         # schon ein codierter String: einfach verwenden
-        if not isinstance(s, six.text_type):
+        if not isinstance(s, six_text_type):
             return s
         try:
             return s.encode(charset, 'strict')
@@ -294,7 +295,7 @@ def make_whitespace_purger(uchars=NON_XML_WHITESPACE_U):
     >>> piw(u'Verbau entfernen und Baugrube verf\xfcllen\x0b (Fortsetzung)')
     u'Verbau entfernen und Baugrube verf\xfcllen (Fortsetzung)'
     """
-    if not isinstance(uchars, six.text_type):
+    if not isinstance(uchars, six_text_type):
         raise ValueError('Ich will Unicode! (%r)' % (uchars,))
     ucharset = frozenset(uchars)
 
@@ -303,7 +304,7 @@ def make_whitespace_purger(uchars=NON_XML_WHITESPACE_U):
         Bereinige den übergebenen unicode-String bzgl. ungeeigneten Leerraums,
         z. B. vertikaler Tab-Zeichen (0x0b bzw. \v), die etree unverdaulich findet.
         """
-        if not isinstance(u, six.text_type):
+        if not isinstance(u, six_text_type):
             raise ValueError('Ich will Unicode! (%r)' % (u,))
         if not ucharset.intersection(u):
             return u

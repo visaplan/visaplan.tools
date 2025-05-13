@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*- äöü
 """
-CSV-Unterstützung: Excel-kompatible CSV-Dateien erzeugen (Semikolon, UTF-8)
-
-(initial extrahiert aus tan-Browser)
+CSV support: create Excel(tm)-compatible CSV files (semicolon, UTF-8)
 """
 
 # Python compatibility:
 from __future__ import absolute_import
 
 # Standard library:
-# from csv import writer as writer_, excel, register_dialect
-# from csv import register_dialect
+import sys
+if sys.version_info > (3,):
+   # Standard library:
+   from io.StringIO import StringIO
+else:
+   # Standard library (Python 2):
+   from StringIO import StringIO
+
+# Standard library:
 import csv
 from codecs import BOM_UTF8
-
-# 3rd party:
-from StringIO import StringIO  # hier importiert für Doctests
 
 __all__ = ['ExcelSSV',  # Excel+ssv (semicolon-separated values)
            'csv_writer',
@@ -103,3 +105,9 @@ def make_sequencer(keys, factory=None):
     else:
         return in_order_transformed_values
 # --------------------------- ] ... aus Products.unitracc.tools.misc ]
+
+
+if __name__ == '__main__':
+    # Standard library:
+    import doctest
+    doctest.testmod()

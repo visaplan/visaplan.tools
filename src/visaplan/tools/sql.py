@@ -745,7 +745,7 @@ def make_dict_extractor(**kwargs):
         get = pop and source.pop or source.get
         res = {}
         if fields is None:
-            fields = source.keys()  # noqa
+            fields = source.keys()  # we iterate this once only
         elif isinstance(fields, six_string_types):
             fields = fields.split()
         for field in fields:
@@ -762,7 +762,7 @@ def make_dict_extractor(**kwargs):
         get = pop and source.pop or source.get
         res = {}
         if fields is None:
-            fields = source.keys()  # noqa
+            fields = source.keys()  # we iterate this once only
         elif isinstance(fields, six_string_types):
             fields = fields.split()
         for field in fields:

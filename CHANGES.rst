@@ -8,7 +8,7 @@ Changelog
 Breaking changes:
 
 - Drop Python 2 compatiblity.
-  (branch [py3-only])
+  (branch ``[py3-only]``)
 
 
 1.5.0 (estimated)
@@ -27,7 +27,8 @@ Breaking changes:
 
 Breaking changes:
 
-- .html *module renamed* to .htmlohmy, because of trouble importing from ``html.entities``
+- ``.html`` *module renamed* to ``.htmlohmy``,
+  because of trouble importing from ``html.entities``
 
 New Features:
 
@@ -41,8 +42,9 @@ New Features:
   **Note:** If you'd like to have the worker's names of your Zope or Plone
   instance written to the lock files
   (usually something like ``instance`` or ``client1``),
-  you'll probably need the respective module
-  of the visaplan.plone.tools_ package.
+  you'll probably want the respective module
+  of the visaplan.plone.tools_ package
+  (v1.5.4+, or an older version in v1.4.19+) instead.
 
 Improvements:
 
@@ -497,6 +499,9 @@ New Features:
 ----------------
 
 - Initial release, including modules ``classes``, ``html``, ``http`` and ``coding``
+
+  **Note:** the ``html`` module will be *renamed* to ``htmlohmy`` in v1.4!
+
   [tobiasherp]
 
 .. _collections-extended: https://pypi.org/project/collections-extended

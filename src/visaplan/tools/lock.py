@@ -41,6 +41,8 @@ Further remarks:
 # - new property ConvenientLock.logger
 # - range comments for top-level utility functions
 # - "TOC entries" documented
+# and:
+# - restored Python 2 compatibility (* in args definiton, f-strings)
 # TODO:
 # - remove _env option?
 # - support alternative argument names, e.g. 'lockfile_name' instead of 'name'
@@ -112,7 +114,7 @@ LockfileOptions = namedtuple('LockfileOptions',
                               'zclf_kw',    # for zc.lockfile
                               'testonly'])
 
-def check_lockfile_options(name=None, *,  # -------------- { skip docstring: [
+def check_lockfile_options(name=None, # ------------------ { skip docstring: [
         dest_dir=None,
         tries=1,
         delay=None,  # required for tries > 1
@@ -125,10 +127,13 @@ def check_lockfile_options(name=None, *,  # -------------- { skip docstring: [
     """
     Testable options evaluation for ConvenientLock
 
+    NOTE: All arguments but the first (`name`) *should' be given by name;
+          in the Python-3-only version of this module, this is *enforced!*
+
     This includes creation of a directory, if necessary; for testablity, we
     inject a special keyword argument:
-    >>> def clo(*args, doctest_only=True, **kwargs):
-    ...     return check_lockfile_options(*args, doctest_only=doctest_only,
+    >>> def clo(name=None, doctest_only=True, **kwargs):
+    ...     return check_lockfile_options(name, doctest_only=doctest_only,
     ...                                   **kwargs)
 
     We don't need to specify anything:
@@ -181,11 +186,10 @@ def check_lockfile_options(name=None, *,  # -------------- { skip docstring: [
                     testonly=True)
 
     ... unless we choose to be strict:
-    >>> clo('my.lock', bogus=43, strict=True)
-    ...                                       # doctest: +NORMALIZE_WHITESPACE
+    >>> clo('my.lock', bogus=43, strict=True)             # doctest: +ELLIPSIS
     Traceback (most recent call last):
       ...
-    TypeError: Invalid argument: 'bogus' <class 'int'>
+    TypeError: Invalid argument: 'bogus' <... 'int'>
 
     Now for some special functionality.
     We might want to tell the zc.lockfile module to add_hostname information:
@@ -230,10 +234,10 @@ def check_lockfile_options(name=None, *,  # -------------- { skip docstring: [
     Traceback (most recent call last):
       ...
     TypeError: with tries > 1 (3), please specify a delay [seconds]!
-    >>> clo(tries=3, delay='3.0')
+    >>> clo(tries=3, delay='3.0')                         # doctest: +ELLIPSIS
     Traceback (most recent call last):
       ...
-    ValueError: delay must be a number; found <class 'str'>
+    ValueError: delay must be a number; found <... 'str'>
     >>> clo(tries=3, delay=-1)
     Traceback (most recent call last):
       ...
@@ -262,22 +266,30 @@ def check_lockfile_options(name=None, *,  # -------------- { skip docstring: [
         name = normpath(join(dest_dir, name))
         mkdir = kwargs.get('mkdir', True)
     if mkdir:
-        assert dest_dir, (f'with mkdir={mkdir}, '
-                          f'we need a dest_dir! ({dest_dir!r})!')
+        assert dest_dir, ('with mkdir=%(mkdir)s, '
+                          'we need a dest_dir! (%(dest_dir)r)!'
+                          % locals())
         if not doctest_only and not isdir(dest_dir):
             makedirs(dest_dir)
     if not isinstance(tries, int):
-        raise ValueError(f'tries must be an int; found {type(tries)}')
+        nfo = type(tries)
+        raise ValueError('tries must be an int; found %(nfo)s'
+                         % locals())
     elif tries < 1:
-        raise ValueError(f'tries must be >= 1 ({tries!r})')
+        raise ValueError('tries must be >= 1 (%(tries)r)'
+                         % locals())
     elif tries > 1:
         if delay is None:
-            raise TypeError(f'with tries > 1 ({tries}), please specify '
-                            'a delay [seconds]!')
+            raise TypeError('with tries > 1 (%(tries)s), please specify '
+                            'a delay [seconds]!'
+                            % locals())
         if not isinstance(delay, (int, float)):
-            raise ValueError(f'delay must be a number; found {type(delay)}')
+            nfo = type(delay)
+            raise ValueError('delay must be a number; found %(nfo)s'
+                             % locals())
         elif delay <= 0:
-            raise ValueError(f'delay [seconds] > 0 expected; found {delay}!')
+            raise ValueError('delay [seconds] > 0 expected; found %(delay)s!'
+                             % locals())
     else:
         delay = None
 
@@ -285,7 +297,9 @@ def check_lockfile_options(name=None, *,  # -------------- { skip docstring: [
         verbose = (1 if logger is not None
                    else 0)
     elif not isinstance(verbose, (bool, int)):
-        raise TypeError(f'verbose must be a bool or int; found {type(verbose)}')
+        nfo = type(verbose)
+        raise TypeError('verbose must be a bool or int; found %(nfo)s'
+                        % locals())
     if verbose and not logger:
         raise TypeError("Can't be verbose with no logger given!")
 
@@ -294,7 +308,9 @@ def check_lockfile_options(name=None, *,  # -------------- { skip docstring: [
         if key in DEFAULTS_KW:
             lkw[key] = val
         elif strict:
-            raise TypeError(f'Invalid argument: {key!r} {type(val)}')
+            nfo = type(val)
+            raise TypeError('Invalid argument: %(key)r %(nfo)s'
+                            % locals())
 
     return LockfileOptions(name, mkdir,
                     tries, delay,
@@ -382,7 +398,8 @@ def lockfile_kwargs(_zclf_v=None,  # --------------------- [ skip docstring: [
              if key.startswith('add_') and pop(key, DEFAULTS_KW[key])
              ]
     if kwargs:
-        raise TypeError(f'Unsupported arguments {set(kwargs)}!')
+        nfo = (', '.join(repr(k) for k in kwargs.keys())).join('{}')
+        raise TypeError('Unsupported arguments %(nfo)s!' % locals())
     if added == ['pid'] or not have_customcontent:
         # this is the default:
         return {}

@@ -85,6 +85,7 @@ except ImportError:
 
 __all__ = [
     'extract_hostname',  # forgiving hostname extractor for invalid URLs
+    'qad_hostname',  # quick and dirty hostname extractor
     # deprecated:
     'http_statustext',  # accepts a questionable func option
     'make_url',  # amend the 'http:' scheme if none is contained
@@ -168,6 +169,48 @@ def extract_hostname(url):
             return hostname
         raise ValueError('%(url)r doesn\'t contain a hostname'
                          % locals())
+
+
+def qad_hostname(url):
+    """
+    "Quick and dirty" hostname extraction (for trusted input)
+
+    Sometimes we *know* that we'll get a valid absolute URL,
+    including protocol and hostname.
+    In such cases, we just need to split by slash!
+
+    >>> qad_hostname('http://unitracc.de/akademie')
+    'unitracc.de'
+
+    If we don't have a protocol in the value, we'll either get an error:
+    >>> qad_hostname('betonquali.de')
+    Traceback (most recent call last):
+      ...
+    IndexError: list index out of range
+    >>> qad_hostname('host.name/path')
+    Traceback (most recent call last):
+      ...
+    IndexError: list index out of range
+
+    ... or, if unlucky (!), a wrong value:
+    >>> qad_hostname('betonquali.de/some/misleading/path')
+    'misleading'
+
+    Of course -- following the GIGO priciple -- we are likely to get
+    invalid results for invalid input:
+    >>> url='http://aqwa-academy.net:/Pfad/zur/Datei'
+    >>> qad_hostname(url)
+    'aqwa-academy.net:'
+    >>> urlsplit(url).netloc
+    'aqwa-academy.net:'
+
+    So, if unsure, use the extract_hostname function instead!
+    Or, of course (especially when needing other URL parts as well),
+    the (named) tuple returned by the standard urlsplit / urlparse functions.
+    """
+    if isinstance(url, bytes):
+        return url.split(b'/', 3)[2]
+    return url.split(u'/', 3)[2]
 
 
 if __name__ == '__main__':

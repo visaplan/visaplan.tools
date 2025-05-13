@@ -134,11 +134,10 @@ all-versioned.md5
 tools/
 !src/visaplan/tools/
 update-module
+ignore.*
 init
 init.vim
 CHANGES-in-*.rst
-all-versioned.md5
-ignore.*
 *.lst
 .restore-env.sh
 .svn-*.tmp

@@ -67,14 +67,38 @@ def makeBool(val, default=None):
     default -- Standardwert (ein String!) fuer den Fall, dass val leer ist
                (zumeist None oder der Leerstring); wenn leer, 'no'
 
-    >>> makeBool('True')
+    Any boolean value, converted to string, and back to bool, is True by
+    default:
+
+    >>> bool(str(False))
     True
+
+    This is understandable from the standard point of view (any non-empty
+    string is truish), but it's not what we need for certain purposes,
+    e.g. reading values from form data.
+
+    >>> makeBool(str(False))
+    False
+    >>> makeBool(str(True))
+    True
+
+    We understand some common values:
+    >>> makeBool('yes')
+    True
+    >>> makeBool('no')
+    False
+
+    Empty strings are still falsy, by default:
     >>> makeBool('')
     False
+
+    ... but you can specify a default, if needed:
     >>> makeBool('', 'yes')
     True
     >>> makeBool(42)
     42
+    >>> makeBool('0')
+    0
     >>> makeBool('1')
     1
     >>> makeBool(None)
@@ -101,14 +125,17 @@ def makeBool(val, default=None):
     >>> makeBool('42', default='yes')
     42
 
-    Nun kommt der Fehler.
-    Wird 0 als fertige Zahl übergeben, gewinnt bisher der Vorgabewert:
+    Now for the error.
+    Given a number, we don't want the default to apply,
+    as it is neither an empty string nor None, right?
+    >>> makeBool(0, default='yes')                            # doctest: +SKIP
+    0
 
+    What we currently get (DON'T RELY ON IT):
     >>> makeBool(0, default='yes')
     True
 
-    Hierauf bitte nicht verlassen!
-    Dieses Verhalten wird mutmaßlich in einer späteren Version korrigiert werden.
+    This will likely change.
     """
     try:
         if default is None:

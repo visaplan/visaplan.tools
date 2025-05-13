@@ -6,7 +6,6 @@ words - split strings into words
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-import six
 from six import string_types as six_string_types
 from six import text_type as six_text_type
 
@@ -15,7 +14,7 @@ from visaplan.tools.html import entity_aware
 from visaplan.tools.sequences import sequence_slide
 
 __all__ = [
-    'head',  # return the first fuzzy NN characters
+    'head',  # return the first fuzzy NN characters (NO HTML input!)
     ]
 
 
@@ -86,8 +85,32 @@ def _head_kwargs(kw):
     Traceback (most recent call last):
       ...
     ValueError: max_fuzz='honk': integer number expected!
+    >>> _hkw(chars=100, words=20)
+    Traceback (most recent call last):
+      ...
+    TypeError: Currently, we only support either 'chars' or 'words'!
+    >>> _hkw(chars=None, words=None)
+    Traceback (most recent call last):
+      ...
+    TypeError: Neither 'chars' nor 'words' option given!
+    >>> _hkw(words=5, return_tuple=1)
+    Traceback (most recent call last):
+      ...
+    ValueError: The return_tuple option requires a 'chars' specification!
+
+    There is one argument which won't appear in the the returned dict
+    but affects the proposed 'ellipsis' value:
+    >>> kw={'chars': 20, 'got_bytes': 1}
+    >>> _head_kwargs(kw)
+    >>> isinstance(kw['ellipsis'], bytes)
+    True
+    >>> kw={'chars': 20, 'got_bytes': 0}
+    >>> _head_kwargs(kw)
+    >>> isinstance(kw['ellipsis'], bytes)
+    False
 
     """
+    got_bytes = kw.pop('got_bytes', 1)
     for key in ('chars', 'words', 'fuzz', 'max_fuzz'):
         num = kw.get(key)
         if num is not None:
@@ -108,8 +131,11 @@ def _head_kwargs(kw):
     chars = kw['chars']
     words = kw['words']
     max_fuzz = kw.pop('max_fuzz')
-    if chars is None and words is None:
-        raise TypeError("Neither 'chars' nor 'words' option given!")
+    if chars is None:
+        if words is None:
+            raise TypeError("Neither 'chars' nor 'words' option given!")
+    elif words is not None:
+        raise TypeError("Currently, we only support either 'chars' or 'words'!")
 
     fuzz = kw['fuzz']
     if fuzz is None:
@@ -133,7 +159,10 @@ def _head_kwargs(kw):
 
     ellipsis = kw.get('ellipsis')
     if ellipsis is None:
-        kw['ellipsis'] = '...'
+        if got_bytes:
+            kw['ellipsis'] = '...'
+        else:
+            kw['ellipsis'] = u'...'
     elif not isinstance(ellipsis, six_string_types):
         raise ValueError('ellipsis=%(ellipsis)r: string expected!' % locals())
 
@@ -147,7 +176,7 @@ def _head_kwargs(kw):
 
     if chars is None and return_tuple:
         raise ValueError('The return_tuple option requires'
-                ' a chars specification!')
+                " a 'chars' specification!")
 
     strict = kw.pop('strict', True)
     if strict:
@@ -167,8 +196,8 @@ def head(s, **kwargs):
     r"""
     Return the leading part of a string.
 
-    After the string, given positionally as the first argument, we need at
-    least one keyword-only option of:
+    After the string, given positionally as the first argument, we need
+    exactly one of the following keyword-only options:
 
       chars -- the number of characters (approximated)
       words -- less useful, but more easily implemented than `chars`.
@@ -184,6 +213,8 @@ def head(s, **kwargs):
       detect_entities -- when processing HTML, the parser might produce text
                          with entities, which we don't want to destroy
                          accidently (and count each as one character).
+      return_tuple -- currently supported for chars limit only,
+                      NOT (yet) for words
 
     >>> s1 = (' Now that Python is installed,  we would  like to be able to '
     ...       'easily run the interactive Python  interpreter from the '
@@ -287,6 +318,14 @@ def head(s, **kwargs):
 
     That's more like it, right?
 
+    Note that this entity recognition doesn't imply correct HTML prcessing:
+    >>> head('<p>Some paragraph with <strong>additional markup</strong>',
+    ...      chars=30, fuzz=0)
+    '<p>Some paragraph with <strong...'
+
+    It is rather useful for internal use by the .extract.head function
+    of our visaplan.kitchen package, which you should use for HTML input.
+
     Well, the calling code might be interested to know how many characters we
     consider our result to contain.  That's a task for the `return_tuple`
     option:
@@ -301,17 +340,21 @@ def head(s, **kwargs):
     ('D&#195;&#188;sen b&#195;&#188;rsten au&#195;&#159;en ...', 23)
     >>> len('D?sen b?rsten au?en ...')
     23
+    >>> len('D&#195;&#188;sen b&#195;&#188;rsten au&#195;&#159;en ...')
+    56
     """
     kw = dict(kwargs)
-    _head_kwargs(kw)
-    if isinstance(s, six_text_type):
+    if isinstance(s, bytes):
+        kw['got_bytes'] = 1
+        joiner = b''
+        numseps = set(b'.,')
+    elif isinstance(s, six_text_type):
+        kw['got_bytes'] = 0
         joiner = u''
         numseps = set(u'.,')
-    elif isinstance(s, str):
-        joiner = ''
-        numseps = set('.,')
     else:
         raise ValueError('string expected; found %s!' % (type(s),))
+    _head_kwargs(kw)
 
     if kw['strip']:
         s = s.strip()
@@ -460,14 +503,6 @@ def head(s, **kwargs):
 
 
 if __name__ == '__main__':
-    # Standard library:
-  if 0:
-      s3 = (' The quick brown fox  jumps over the refrigerator. ')
-      from pdb import set_trace; set_trace()
-      res3 = head(s3, chars=40, fuzz=2, return_tuple=1)
-      res3 == 'The quick brown fox jumps over the refrige...'[0]
-      print(res3)
-  else:
     # Standard library:
     import doctest
     doctest.testmod()

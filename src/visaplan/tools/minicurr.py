@@ -14,6 +14,9 @@ respective ISO 4217 symbols:
 'EUR'
 """
 
+# Python compatibility:
+from __future__ import absolute_import
+
 __all__ = [
     'ISO4217',
     ]

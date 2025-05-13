@@ -14,13 +14,6 @@ from six.moves import map
 # Local imports:
 from visaplan.tools.minifuncs import check_kwargs
 
-# ACHTUNG - Importe aus dem unitracc-Produkt stets incl. des
-# Products-Kontexts vornehmen, also
-#   "from Products.unitracc.tools.ModulXY import ..."
-# anstelle von
-#   "from unitracc.tools.ModulXY import ..." --
-# ansonsten können Probleme mit dem Pickle-Storage etc. auftreten!
-
 __all__ = [
            # ----------------------- [ aus unitracc.tools.debug2 ... [
            'pp',

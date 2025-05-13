@@ -270,6 +270,8 @@ def list_of_strings(val, splitchar=None, splitfunc=None):
     Im einfachsten Fall wird die Zeichenkette wortweise aufgesplittet:
     >>> list_of_strings(' eins  zwei ')
     ['eins', 'zwei']
+    >>> list_of_strings('private inherit')
+    ['private', 'inherit']
     >>> list_of_strings('  ')
     []
     >>> list_of_strings(' all\n')

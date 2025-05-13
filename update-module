@@ -13,6 +13,22 @@ DEFAULT_MONOLITH_BRANCH='unitracc-staging2'
 SVN_BASE='svn+ssh://svn.visaplan.com/unitracc'
 DEST_PATH=$("$MYDIR/tools/interesting-subpath")
 MSGFILE="$MYDIR/auto.msg"
+case "$MYPRODUCT" in
+	*.PACKAGE)
+		err "Wrong value for \$MYPRODUCT! (currently $MYPRODUCT)"
+		if [[ "$MYDIR" = '.' ]]; then
+			MYDIR=$(pwd)
+		fi
+		MYPRODUCT=$(basename "$MYDIR")
+		if confirm "Change $me? (MYPRODUCT=$MYPRODUCT)"; then
+			sed --in-place "s,^\(MYPRODUCT\)=.*,\1='$MYPRODUCT'," "$me"
+			svn-info "$MYDIR"
+			exit
+		else
+			info "Using MYPRODUCT=$MYPRODUCT"
+		fi
+		;;
+esac
 
 # ----------------------------------------------- [ Vorgeplänkel ... [
 # --------------------------------- [ allgemeine Funktionen ... [
@@ -92,6 +108,7 @@ function add_renamed() {
 function merge_part() {
 	local dest="$1" src thetail success=''
 	local altdest=''
+	local fn_autofixed="/var/tmp/svn-merge-$$-review.tmp"
 	case "$dest" in
 			# um $DEST_PATH/__init__.py zu ignorieren:
 			# svn merge ^/products/visaplan.plone.tools/branches/v1_0 . -c22748
@@ -191,15 +208,52 @@ function merge_part() {
 	# -------- ] ... Behandlung etwaiger Umbenennungen ]
 	echo svn merge "${SVNARGS[*]}" "$SOURCE_ROOT/$src $dest ..."
 	DONE_ANYTHING='x'
-	if svn merge "${SVNARGS[@]}" "$SOURCE_ROOT/$src" "$dest"; then
+	if svn-merge "${SVNARGS[@]}" "$SOURCE_ROOT/$src" "$dest"; then
 		success='x'
 	else
 		err "Fehler bei Nachführung von Änderungen; RC=$?"
 		svn propget svn:mergeinfo "$dest" | grep "$SOURCE_FILTER"
-		svn update "$dest"
+		svn-update "$dest"
 		svn-status "$dest"
-		return 1
 	fi
+
+	sed -ne 's,^Merge conflicts in .\(.*\). marked as resolved.$,\1,p' /var/tmp/svn-merge-$$.tmp | sort -u > "$fn_autofixed"
+	if [[ -s "$fn_autofixed" ]]; then
+		warn "$(wc -l "$fn_autofixed") items have been auto-resolved"
+		info "(see $fn_autofixed)"
+		if [[ -n "$FROMPRODUCT" ]]; then
+			local src_dn="$MYDIR/../$FROMPRODUCT"
+			if [[ -d "$src_dn" ]]; then
+				svn-info "$src_dn"
+				local _helper=tools/push-all-changes-right-save-and-diff.vim
+				if [[ -f "$_helper" ]]; then
+					info "Hint (for vim): :source $_helper"
+				fi
+				if confirm "Review the autofixed files?"; then
+					local src_fn=''
+					for fn in $(cat "$fn_autofixed"); do
+						src_fn="$src_dn/$fn"
+						if [[ -d "$src_fn" ]]; then
+							warn "Can't compare: $src_fn is a directory!"
+						elif [[ -f "$src_fn" ]]; then
+							vimdiff "$src_fn" "$fn"
+						else
+							warn "Can't compare: $src_fn not found!"
+						fi
+					done
+				else
+					(echo "*** Auto-resolved during merge:"; cat "$fn_autofixed"; echo) >> "$MSGFILE"
+				fi
+			else
+				warn "Sorry; no directory $src_dn found!"
+				(echo "*** Auto-resolved during merge:"; cat "$fn_autofixed"; echo) >> "$MSGFILE"
+			fi
+		else
+			warn "Sorry: no --product; auto-review not yet implemente!"
+			(echo "*** Auto-resolved during merge:"; cat "$fn_autofixed"; echo) >> "$MSGFILE"
+		fi
+	fi
+
 	echo "Änderungen für $dest:" >> "$MSGFILE"
 	# info "*** dest='$dest' SOURCE_FILTER='$SOURCE_FILTER' MSGFILE='$MSGFILE'"
 	svn diff --depth=empty --properties-only "$dest" \
@@ -468,7 +522,7 @@ else
 			USUAL_SUBPATH="src/$(echo "$FROMPRODUCT" | sed 's,\.,/,g')/tools"
 			;;
 		SKELETON)
-			USUAL_SUBPATH=''
+			USUAL_SUBPATH='tools'
 			;;
 		'')
 			err "Kein Produkt angegeben (-p|--product)!"

@@ -13,6 +13,26 @@ Breaking changes:
   - ``make_url``
 
 
+1.3.13 (2024-03-21)
+-------------------
+
+New Features:
+
+- New function .http.qad_hostname (for valid absolute URLs only)
+
+Improvements:
+
+- Improved .words.head to avoid implicit string decoding
+
+Miscellaneous:
+
+- We make clear that our .words.head function doesn't handle HTML markup correctly
+  (but unescapes entities only, if requested).
+  Use the similar function from visaplan.kitchen.extract instead.
+
+[tobiasherp]
+
+
 1.3.12 (2023-05-02)
 -------------------
 
@@ -372,7 +392,7 @@ New Features:
 
 - new module ``profile``:
 
-  - ``StopWatch`` context manager and ``@profile`` decorator
+  - ``StopWatch`` `context manager`_ and ``@profile`` decorator
 
 - new module ``mock``:
 
@@ -436,6 +456,7 @@ New Features:
   [tobiasherp]
 
 .. _collections-extended: https://pypi.org/project/collections-extended
+.. _`context manager`: https://peps.python.org/pep-0343/
 .. _importlib_metadata: https://pypi.org/project/importlib-metadata/
 .. _`ISO 4217`: https://www.iso.org/iso-4217-currency-codes.html
 .. _Python: https://www.python.org

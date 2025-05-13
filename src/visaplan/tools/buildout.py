@@ -10,6 +10,10 @@ version.
 # Python compatibility:
 from __future__ import absolute_import
 
+# backport for Python 3.7- (from PyPI):
+from importlib_metadata import PackageNotFoundError
+from importlib_metadata import version as pkg_version
+
 # Standard library:
 import sys
 from os.path import normpath, sep
@@ -19,11 +23,6 @@ from visaplan.tools.sequences import sequence_slide
 
 # Logging / Debugging:
 from logging import getLogger
-
-# backport for Python 3.7- (from PyPI);
-# Python compatibility:
-from importlib_metadata import PackageNotFoundError
-from importlib_metadata import version as pkg_version
 
 __all__ = [
     'checkPathForPackage',

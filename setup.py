@@ -150,10 +150,10 @@ setup_kwargs = dict(
     description="General Python tools",
     long_description=long_description,
     long_description_content_type='text/x-rst',
+    python_requires='>="3.6"',
     # Get more from https://pypi.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Intended Audience :: Developers",
         "Natural Language :: German",
@@ -173,18 +173,13 @@ setup_kwargs = dict(
     zip_safe=False,
     install_requires=[
         'setuptools >=36.2',
-        'importlib_metadata <3; python_version <"3.6"', # 3.0.0 requires Python 3.6
-        'importlib_metadata; python_version>="3.6" and python_version<"3.8"',
+        'importlib_metadata; python_version <"3.8"',
         'six',
     ],
     extras_require={
         'lock': [
-            # packaging v21.0 dropped Python 2.7, 3.4, 3.5 support:
-            'packaging <21; python_version <"3.6"', 
-            'packaging; python_version >="3.6"', 
-            # zc.lockfile v3.0 lacked the python_requires constraint: 
-            'zc.lockfile <3; python_version <"3.6"',
-            'zc.lockfile; python_version >="3.6"',
+            'packaging', 
+            'zc.lockfile',
             ],
     },
 )

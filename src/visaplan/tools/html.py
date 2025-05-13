@@ -460,7 +460,7 @@ def make_picture(**kw):
          class="img-responsive">
     </a>'
 
-    A title attribute is always applied to the img element:
+    A title attribute, if given, is always applied to the img element:
     >>> kw['title'] = 'Some fancy image'
     >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
     '<a href="/some/fancy/link/">
@@ -653,6 +653,52 @@ def make_picture(**kw):
              class="img-responsive">
      </a>'
 
+    Those of us who have created responsive images before
+    will wonder about the sizes attribute.
+    If missing, and if the srcset contains width specification,
+    the default value is '100vw'; but we can specify something else, of course:
+
+    >>> kw['sizes'] = '(max-width: 500px) 100vw, 50vw'
+    >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
+    '<a href="/some/fancy/link/">
+    <img srcset="/++images++/babyface-300.jpg 300w,
+                  /++images++/babyface-600.jpg 600w"
+         sizes="(max-width: 500px) 100vw, 50vw"
+         src="/++images++/babyface-300.jpg"
+         alt=""
+         title="Some fancy image">
+    </a>'
+    >>> kw['img_style'] = 'max-width: 600px'
+    >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
+    '<a href="/some/fancy/link/">
+    <img srcset="/++images++/babyface-300.jpg 300w,
+                  /++images++/babyface-600.jpg 600w"
+         sizes="(max-width: 500px) 100vw, 50vw"
+         src="/++images++/babyface-300.jpg"
+         alt=""
+         style="max-width: 600px"
+         title="Some fancy image">
+    </a>'
+
+    You might want to add some suffix to all URLs, to force the browser to load
+    the image from disk instead of simply using a cached version.
+    With widths, this can easily be achieved using the source_mask:
+    >>> oldmask = kw['source_mask']
+    >>> kw['source_mask'] += '?123'
+    >>> kw['source_mask']
+    'babyface-%(width)d.jpg?123'
+    >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
+    '<a href="/some/fancy/link/">
+    <img srcset="/++images++/babyface-300.jpg?123 300w,
+                  /++images++/babyface-600.jpg?123 600w"
+         sizes="(max-width: 500px) 100vw, 50vw"
+         src="/++images++/babyface-300.jpg?123"
+         alt=""
+         style="max-width: 600px"
+         title="Some fancy image">
+    </a>'
+    >>> kw['source_mask'] = oldmask
+
     Now, we provide some basic support for alternate image formats;
     this means, we'll need to create a picture element,
     and for the source element, at least, we'll need a mime-type specification.
@@ -660,6 +706,12 @@ def make_picture(**kw):
     >>> kw['img_mask'] = kw['source_mask']
     >>> kw['source_mask'] = 'babyface-%(width)d.webp'
     >>> kw['source_type'] = 'image/webp'
+    >>> del kw['img_style']
+    >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+      ...
+    ValueError: We don't support <picture ...> elements with "sizes" specifications yet!
+    >>> del kw['sizes']
     >>> make_picture(widths=(300, 600), **kw)  # doctest: +NORMALIZE_WHITESPACE
     '<a href="/some/fancy/link/">
     <picture>
@@ -701,11 +753,15 @@ def make_picture(**kw):
     prefix          a common prefix for all image resource paths
     joiner          a string, or a 2-tuple of strings
     img_class       a class attribute for the img element
+    img_style       a style attribute for the img element
     img_mask        a string with '%(...)s'-style placeholders, usually for
                     'width' (if widths given) and/or 'name'.
                     May be the empty string.
     widths          a sequence of numbers, currently in ascending order,
                     to create the srcset attribute
+    sizes           currently a fixed 'sizes' value to help the browser to
+                    choose from the widhts; not yet supported for picture
+                    elements
     src_width       the width of the src attribute resource
     use_largest     use the largest img source (default: False)
 
@@ -725,6 +781,9 @@ def make_picture(**kw):
     TO DO
     -----
 
+    - If we create a srcset attribute with ...w specifications (width
+      descriptors), we might need to create a sizes attribute as well!
+      We support a fixed `sizes` value, for now.
     - We don't currently support multiple <source> elements.
       We don't currently need them, and we'd probably need a more complicated
       arguments signature.
@@ -799,6 +858,9 @@ def make_picture(**kw):
     img_class = pop('img_class', None)
     if img_class:
         img_attributes['class'] = img_class
+    img_style = pop('img_style', None)
+    if img_style:
+        img_attributes['style'] = img_style
 
     if (img_mask and source_mask):
         pass
@@ -881,6 +943,11 @@ def make_picture(**kw):
     fancy_attributes = []
     if srcset:
         fancy_attributes.append(('srcset', ', '.join(srcset)))
+        if sizes and not need_picture:
+            fancy_attributes.append(('sizes', sizes))
+        elif sizes:
+            raise ValueError("We don't support <picture ...> elements "
+                    'with "sizes" specifications yet!')
     if need_picture:
         fancy_attributes.append(('type', source_type))
         # we currently create one <source> element for the fancy parts

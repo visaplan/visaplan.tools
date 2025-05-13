@@ -15,6 +15,12 @@ Breaking changes, estimated for future releases:
 
   (estimated for release 1.5.0)
  
+Bugs to be fixed:
+
+- The `.html.make_picture` function currently creates ``srcset`` attributes with
+  width descriptors but no ``sizes`` attribute -- which is needed for the
+  ``srcset`` to be honored!
+
 Other things to do:
 
 - Turn the information above in a nice table

@@ -1,6 +1,22 @@
 Changelog
 =========
 
+1.3.9 (2022-11-21)
+------------------
+
+Bugfixes:
+
+- .html.make_picture didn't support the `sizes` option.
+  We do so now for img[srcset] (not yet for picture elements)
+
+Improvements:
+
+- .html.make_picture:
+
+  - `img_style` option
+
+[tobiasherp]
+
 
 1.3.8 (2022-09-20)
 ------------------

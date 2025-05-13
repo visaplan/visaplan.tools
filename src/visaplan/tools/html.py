@@ -56,7 +56,7 @@ supporting paragraphs and unordered lists:
     <BLANKLINE>
     And now for something completely different …
     >>> from_plain_text(plain,
-    ...                joiner=u' ')  # doctest: +NORMALIZE_WHITESPACE
+    ...                joiner=u' ')            # doctest: +NORMALIZE_WHITESPACE
     u'<ul> <li> foo <li> bar
      </ul>
       <p> And now for something completely different \u2026'
@@ -66,7 +66,7 @@ supporting paragraphs and unordered lists:
     ... %(bull)s bar
     ...
     ... And now for something completely different %(hellip)s'''
-    ... % entity, joiner=u' ')  # doctest: +NORMALIZE_WHITESPACE
+    ... % entity, joiner=u' ')                 # doctest: +NORMALIZE_WHITESPACE
     u'<ul> <li> foo <li> bar
      </ul>
       <p> And now for something completely different \u2026'
@@ -76,7 +76,6 @@ supporting paragraphs and unordered lists:
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-import six
 from six import text_type as six_text_type
 from six import unichr
 from six.moves.html_entities import name2codepoint
@@ -329,6 +328,16 @@ def collapse_whitespace(s, preserve_edge=True):
     >>> collapse_whitespace(footertxt)
     u'http://www.unitracc.de | http://www.unitracc.com'
 
+    >>> html2=(u'<!DOCTYPE html>\n\n<html>\n    <body>\n        <p>\n'
+    ... u'Sehr geehrte(r)\n            Tobias Herp,\n        </p>\n        <p>Ihr '
+    ... u'gew\xfcnschter PDF-Export von \u201eHurz\u201c ist abgeschlossen. Sie '
+    ... u'k\xf6nnen ihn unter <a '
+    ... u'href="https://dev-de.unitracc.deknow-how/fachbuecher/demo-leitfaden-mikrotunnelbau/export_view">'
+    ... u'https://dev-de.unitracc.deknow-how/fachbuecher/demo-leitfaden-mikrotunnelbau/export_view</a> '
+    ... u'herunterladen.</p>\n        \n    </body>\n</html>\n\n')
+    >>> collapse_whitespace(html2, preserve_edge=False)
+    u'<!DOCTYPE html> <html> <body> <p> Sehr geehrte(r) Tobias Herp, </p> <p>Ihr gew\xfcnschter PDF-Export von \u201eHurz\u201c ist abgeschlossen. Sie k\xf6nnen ihn unter <a href="https://dev-de.unitracc.deknow-how/fachbuecher/demo-leitfaden-mikrotunnelbau/export_view">https://dev-de.unitracc.deknow-how/fachbuecher/demo-leitfaden-mikrotunnelbau/export_view</a> herunterladen.</p> </body> </html>'
+
     Achtung: die Unterstützung des charset-Arguments wurde hier vorsätzlich
     entfernt:
     - es wurde nie verwendet
@@ -383,7 +392,7 @@ def _unicode_without_bom(s, charset='utf-8'):
 
 def make_picture(**kw):
     r"""
-    create an HTML <img> element, wrapped in <picture> and / or <a> elements as needed
+    Create an HTML <img> element, wrapped in <picture> and / or <a> elements as needed
 
     What you get is only what you need (if implemented).
     If all you need is to save bandwith by delivering the smallest image
@@ -462,6 +471,188 @@ def make_picture(**kw):
          title="Some fancy image">
     </a>'
 
+    >>> kw2 = dict(prefix='/++thumbnail++/abc123-',
+    ...            widths=(180, 240),
+    ...            source_mask='%(width)d.jpg')
+    >>> make_picture(**kw2)                    # doctest: +NORMALIZE_WHITESPACE
+    '<img srcset="/++thumbnail++/abc123-180.jpg 180w,
+                  /++thumbnail++/abc123-240.jpg 240w"
+             src="/++thumbnail++/abc123-180.jpg"
+          alt="">'
+
+    To use a `name` option, which might be more convenient in a loop:
+    >>> kw2['prefix'] = '/++thumbnail++/'
+    >>> kw2.update({
+    ...    'prefix':      '/++thumbnail++/',
+    ...    'joiner':      ' ',
+    ...    'source_mask': '%(name)s-%(width)d.jpg',
+    ...    })
+    >>> make_picture(name='cde456',
+    ...              **kw2)                    # doctest: +NORMALIZE_WHITESPACE
+    '<img srcset="/++thumbnail++/cde456-180.jpg 180w,
+                  /++thumbnail++/cde456-240.jpg 240w"
+             src="/++thumbnail++/cde456-180.jpg"
+        alt="">'
+
+    If giving a `rel`, we need to have an `href` as well:
+    >>> make_picture(name='abc123',
+    ...              rel='uid-abc123',
+    ...              **kw2)                    # doctest: +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+      ...
+    TypeError: We need an "href" argument as well!
+    >>> make_picture(name='abc123',
+    ...              rel='uid-abc123',
+    ...              href='/some/fancy/url',
+    ...              **kw2)                    # doctest: +NORMALIZE_WHITESPACE
+    '<a href="/some/fancy/url"
+        rel="uid-abc123">
+      <img srcset="/++thumbnail++/abc123-180.jpg 180w,
+                   /++thumbnail++/abc123-240.jpg 240w"
+              src="/++thumbnail++/abc123-180.jpg"
+           alt="">
+    </a>'
+
+    Let's create a loop item for a foils view.
+    Our existing preview thumbnails w/o width information are 240px wide,
+    but we might have 120px versions as well already:
+
+    >>> kw3 = dict([
+    ...  ('joiner', ' '),
+    ...  ('prefix', '/++thumbnail++/'),
+    ...  ('source_mask', '%(name)s-%(width)d.jpg'),
+    ...  ('img_mask', '%(name)s'),
+    ...  ('widths', (120,))])
+    >>> uid = 'abc123'
+    >>> make_picture(name=uid, src=uid, **kw3)
+    ...                                        # doctest: +NORMALIZE_WHITESPACE
+    '<img srcset="/++thumbnail++/abc123-120.jpg 120w"
+          src="/++thumbnail++/abc123"
+          alt="">'
+
+    We need a surrounding link:
+    >>> kw3['href'] = '/oh/anywhere/@@ppt_view?uid=uid-abc123'
+    >>> make_picture(name=uid, src=uid, **kw3)
+    ...                                        # doctest: +NORMALIZE_WHITESPACE
+    '<a href="/oh/anywhere/@@ppt_view?uid=uid-abc123">
+     <img srcset="/++thumbnail++/abc123-120.jpg 120w"
+             src="/++thumbnail++/abc123"
+             alt="">
+     </a>'
+
+    We want a "rel" attribute:
+    >>> kw3['rel'] = 'uid=uid-abc123'
+    >>> make_picture(name=uid, src=uid, **kw3)
+    ...                                        # doctest: +NORMALIZE_WHITESPACE
+    '<a href="/oh/anywhere/@@ppt_view?uid=uid-abc123"
+        rel="uid=uid-abc123">
+     <img srcset="/++thumbnail++/abc123-120.jpg 120w"
+             src="/++thumbnail++/abc123"
+             alt="">
+     </a>'
+
+    And an ID:
+    >>> kw3['id'] = 'foil-42'
+    >>> make_picture(name=uid, src=uid, **kw3)
+    ...                                        # doctest: +NORMALIZE_WHITESPACE
+    '<a href="/oh/anywhere/@@ppt_view?uid=uid-abc123"
+        id="foil-42"
+        rel="uid=uid-abc123">
+     <img srcset="/++thumbnail++/abc123-120.jpg 120w"
+             src="/++thumbnail++/abc123"
+             alt="">
+     </a>'
+
+    Our image should be responsive:
+
+    >>> kw3['img_class'] = 'img-responsive'
+    >>> make_picture(name=uid, src=uid, **kw3)
+    ...                                        # doctest: +NORMALIZE_WHITESPACE
+    '<a href="/oh/anywhere/@@ppt_view?uid=uid-abc123"
+        id="foil-42"
+        rel="uid=uid-abc123">
+     <img srcset="/++thumbnail++/abc123-120.jpg 120w"
+             src="/++thumbnail++/abc123"
+             alt=""
+             class="img-responsive">
+     </a>'
+
+    For this to work, we need an outer class as well, e.g.:
+
+    >>> kw3['outer_class'] = 'col-lg-2 col-md-3 col-sm-4 col-xs-6'
+    >>> make_picture(name=uid, src=uid, **kw3)
+    ...                                        # doctest: +NORMALIZE_WHITESPACE
+    '<a class="col-lg-2 col-md-3 col-sm-4 col-xs-6"
+        href="/oh/anywhere/@@ppt_view?uid=uid-abc123"
+        id="foil-42"
+        rel="uid=uid-abc123">
+     <img srcset="/++thumbnail++/abc123-120.jpg 120w"
+             src="/++thumbnail++/abc123"
+             alt=""
+             class="img-responsive">
+     </a>'
+
+    >>> kw3['alt'] = 'Foil 42'
+    >>> make_picture(name=uid, src=uid, **kw3)
+    ...                                        # doctest: +NORMALIZE_WHITESPACE
+    '<a class="col-lg-2 col-md-3 col-sm-4 col-xs-6"
+        href="/oh/anywhere/@@ppt_view?uid=uid-abc123"
+        id="foil-42"
+        rel="uid=uid-abc123">
+     <img srcset="/++thumbnail++/abc123-120.jpg 120w"
+             src="/++thumbnail++/abc123"
+             alt="Foil 42"
+             class="img-responsive">
+     </a>'
+
+    Let's put together the options we have used:
+    >>> kw3.update({'name': uid, 'src': uid})
+    >>> sorted(kw3.items())                    # doctest: +NORMALIZE_WHITESPACE
+    [('alt',            'Foil 42'),
+     ('href',           '/oh/anywhere/@@ppt_view?uid=uid-abc123'),
+     ('id',             'foil-42'),
+     ('img_class',      'img-responsive'),
+     ('img_mask',       '%(name)s'),
+     ('joiner',         ' '),
+     ('name',           'abc123'),
+     ('outer_class',    'col-lg-2 col-md-3 col-sm-4 col-xs-6'),
+     ('prefix',         '/++thumbnail++/'),
+     ('rel',            'uid=uid-abc123'),
+     ('source_mask',    '%(name)s-%(width)d.jpg'),
+     ('src',            'abc123'),
+     ('widths',         (120,))]
+
+    If our image paths all share a longer common prefix, we may use it:
+    >>> kw3['prefix'] += kw3.pop('name')
+    >>> kw3.update({
+    ...    'source_mask': '-%(width)d.jpg',
+    ...    'img_mask':    '',})
+    >>> sorted(kw3.items())                    # doctest: +NORMALIZE_WHITESPACE
+    [('alt',            'Foil 42'),
+     ('href',           '/oh/anywhere/@@ppt_view?uid=uid-abc123'),
+     ('id',             'foil-42'),
+     ('img_class',      'img-responsive'),
+     ('img_mask',       ''),
+     ('joiner',         ' '),
+     ('outer_class',    'col-lg-2 col-md-3 col-sm-4 col-xs-6'),
+     ('prefix',         '/++thumbnail++/abc123'),
+     ('rel',            'uid=uid-abc123'),
+     ('source_mask',    '-%(width)d.jpg'),
+     ('src',            'abc123'),
+     ('widths',         (120,))]
+
+    The result is the same:
+    >>> make_picture(**kw3)                    # doctest: +NORMALIZE_WHITESPACE
+    '<a class="col-lg-2 col-md-3 col-sm-4 col-xs-6"
+        href="/oh/anywhere/@@ppt_view?uid=uid-abc123"
+        id="foil-42"
+        rel="uid=uid-abc123">
+     <img srcset="/++thumbnail++/abc123-120.jpg 120w"
+             src="/++thumbnail++/abc123"
+             alt="Foil 42"
+             class="img-responsive">
+     </a>'
+
     Now, we provide some basic support for alternate image formats;
     this means, we'll need to create a picture element,
     and for the source element, at least, we'll need a mime-type specification.
@@ -493,7 +684,7 @@ def make_picture(**kw):
     Finally, let's check some invalid and/or possibly evil input:
     >>> make_picture(href='#">harmless label<% do bad things %>',
     ...              joiner=' ',
-    ...              title='E-Journal')  # doctest: +NORMALIZE_WHITESPACE
+    ...              title='E-Journal')        # doctest: +NORMALIZE_WHITESPACE
     '<a href="#&quot;&gt;harmless label&lt;% do bad things %&gt;">
     E-Journal
     </a>'
@@ -511,14 +702,22 @@ def make_picture(**kw):
     joiner          a string, or a 2-tuple of strings
     img_class       a class attribute for the img element
     img_mask        a string with '%(...)s'-style placeholders, usually for
-                    'width' (if widths given) and/or 'name'
+                    'width' (if widths given) and/or 'name'.
+                    May be the empty string.
     widths          a sequence of numbers, currently in ascending order,
                     to create the srcset attribute
     src_width       the width of the src attribute resource
     use_largest     use the largest img source (default: False)
 
+    outer_class     a class attribute for the outmost element.
+                    This might be the img element itself, if we don't have a
+                    reason to create anything else; however, if we have an
+                    `img_class` (above) and no '<a>' to attach to, we create a
+                    '<div>' to take it.
+
     href            a (usually local) URL; if given, we'll get an '<a>' element
                     to wrap the img and/or picture
+    rel             as this applies to an '<a>', we require an `href` as well
     title           a title attribute for the img element, or the visible text
                     for an empty a[href]
 
@@ -559,6 +758,7 @@ def make_picture(**kw):
     widths = pop('widths', None)  # a sequence of integers, or None
     sizes = pop('sizes', None)  # effective default is '100vw'
     source_type = pop('source_type', None)
+    img_type = pop('img_type', None)
     src_width = pop('src_width', None)
     use_largest = pop('use_largest',
                       False if widths and src_width is None
@@ -567,20 +767,25 @@ def make_picture(**kw):
         raise TypeError('Unsupported argument width=%(width)r!' % kwargs)
     outmost_elem = None
     need_picture = False
+    need_anchor = False
     elements = []
     leadout_list = []
     srcset = []
     smallest = None
 
     outmost_attributes = {}
-    for attr in ('href', 'id'):
+    for attr in ('href', 'id', 'rel'):
         tmp = pop(attr, None)
         if not tmp:
             continue
         if attr == 'href':
             outmost_elem = 'a'
             leadout_list.append('</a>')
+        elif attr == 'rel':
+            need_anchor = True
         outmost_attributes[attr] = tmp
+    if need_anchor and not 'href' in outmost_attributes:
+        raise TypeError('We need an "href" argument as well!')
 
     img_attributes = {}
     for attr in ('alt', 'title'):
@@ -591,22 +796,40 @@ def make_picture(**kw):
         elif not tmp:
             continue
         img_attributes[attr] = tmp
-    tmp = pop('img_class', None)
-    if tmp:
-        img_attributes['class'] = tmp
+    img_class = pop('img_class', None)
+    if img_class:
+        img_attributes['class'] = img_class
 
     if (img_mask and source_mask):
-        need_picture = True
-    elif not img_mask:
+        pass
+    elif img_mask is None:
         img_mask = source_mask
+    if source_type is not None:
+        if img_type is not None and source_type != img_type:
+            need_picture = True
+        elif img_mask.endswith('.jpg') and source_type != 'image/jpeg':
+            # well ... a frequent case!
+            need_picture = True
     if outmost_elem is None:
         if need_picture:
             outmost_elem = 'picture'
+
     if need_picture:
         leadout_list.insert(0, '</picture>')
         if not source_type:
             raise ValueError('We need to create a picture element, '
                              " but we don't know the source_type!")
+
+    outer_class = pop('outer_class', None)
+    if outer_class is not None:
+        if img_class is not None or outmost_elem is not None:
+            outmost_attributes['class'] = outer_class
+            if outmost_elem is None:
+                outmost_elem = 'div'
+                leadout_list.insert(0, '</div>')
+        else:
+            img_attributes['class'] = outer_class
+
     if widths is not None:
         if not source_mask:
             raise ValueError('With widths (=%(widths)r) given, '
@@ -688,12 +911,14 @@ def _prepend_prefix(mask, prefix, insert_slash='auto'):
     '/img%(name)s-%(width)d.jpg'
     >>> _prepend_prefix('%(name)s-%(width)d.jpg', None)
     '%(name)s-%(width)d.jpg'
-    >>> _prepend_prefix(None, '/img/')
-    >>> _prepend_prefix('', '/img/')
-    ''
+    >>> _prepend_prefix(None, '/++static++/thumbnail/abc123')
+    >>> _prepend_prefix('', '/++static++/thumbnail/abc123')
+    '/++static++/thumbnail/abc123'
     """
-    if not mask or not prefix:
+    if not prefix:
         return mask
+    elif mask is None:
+        return None
     if insert_slash == 'auto':
         insert_slash = (not mask.startswith('/')
                         and '/' not in prefix)
@@ -763,6 +988,30 @@ if __name__ == '__main__':
       generator = entity_aware('Au&#195;&#159;en')
       res = list(generator)
       print(res)
+  elif 0:
+      from pdb import set_trace; set_trace()
+      kw2 = {'source_mask': '%(name)s-%(width)d.jpg', 'prefix':
+      '/++thumbnail++/', 'widths': (180, 240),
+      'name': 'abc123', 'rel': 'uid-abc123',
+      'joiner': ' '}
+      print(make_picture(**kw2))
+  elif 0:
+      from pdb import set_trace; set_trace()
+      kw3 = dict([('alt', 'Foil 42'),
+       ('href',         '/oh/anywhere/@@ppt_view?uid=uid-abc123'),
+       ('id',           'foil-42'),
+       ('img_class',    'img-responsive'),
+       ('img_mask',     ''),
+       ('joiner',       ' '),
+       ('outer_class',  'col-lg-2 col-md-3 col-sm-4 col-xs-6'),
+       ('prefix',       '/++thumbnail++/abc123'),
+       ('rel',          'uid=uid-abc123'),
+       ('source_mask',  '-%(width)d.jpg'),
+       ('src',          'abc123'),
+       ('widths',       (120,)),
+       ])
+      print(make_picture(**kw3))
+
   else:
     # Standard library:
     import doctest

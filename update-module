@@ -11,7 +11,7 @@ DEFAULT_SRC_BRANCH='v3_1'
 # viele Tools-Module sind in unitracc-split nicht mehr vorhanden:
 DEFAULT_MONOLITH_BRANCH='unitracc-staging2'
 SVN_BASE='svn+ssh://svn.visaplan.com/unitracc'
-DEST_PATH="src/$(echo "$MYPRODUCT" | sed 's,\.,/,g')"
+DEST_PATH=$("$MYDIR/tools/interesting-subpath")
 MSGFILE="$MYDIR/auto.msg"
 
 # ----------------------------------------------- [ Vorgeplänkel ... [
@@ -360,6 +360,9 @@ Optionen:
                 Änderungen aus dem angegebenen Zweig
   -cREV, -rREV  Revisionsangaben wie für svn merge
   modul.py      Zu aktualisierendes Modul (lokaler Dateiname).
+                Bei Änderungen unter ${DEST_PATH}[/...] aus einem --product
+                wird die Quell-URL entsprechend angepaßt.
+
   -h, --help, -?
                 Ausgabe dieser Hilfe
 EOT

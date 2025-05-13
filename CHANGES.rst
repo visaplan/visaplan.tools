@@ -2,24 +2,17 @@ Changelog
 =========
 
 
-2.0.0 (estimated)
------------------
+1.3.8 (2022-09-20)
+------------------
 
-Breaking changes:
+Improvements:
 
-- Signature change (e.g. name of first argument: ``form`` --> ``dic``) for
-  ``dicts.update_dict``.
+- .html.make_picture:
 
-
-1.5.0 (estimated)
------------------
-
-Breaking changes:
-
-- Remove deprecated ``.http`` functions:
-
-  - ``http_statustext``, because of questionable `func` option
-  - ``make_url``
+  - `rel` option (implies ``<a>`` element and the need for `href`)
+  - `outer_class` option (used for the outmost element;
+    with `img_class` and without an ``<a>``, implies a ``<div>``
+  - improved internal `need_picture` criterion
 
 [tobiasherp]
 

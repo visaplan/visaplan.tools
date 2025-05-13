@@ -13,6 +13,17 @@ Breaking changes:
   - ``make_url``
 
 
+1.3.11 (2023-03-21)
+-------------------
+
+- New functions in .minifuncs module:
+
+  - NoneOrFloat
+  - NoneOrDecimal
+
+[tobiasherp]
+
+
 1.3.10 (2023-03-08)
 -------------------
 

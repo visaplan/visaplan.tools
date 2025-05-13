@@ -20,6 +20,7 @@ __all__ = [
     'makeBool',
     'NoneOrBool',
     'NoneOrInt',
+    'NoneOrFloat',
     'NoneOrString',
     'is_nonempty_string',
     'IntOrOther',
@@ -161,6 +162,74 @@ def NoneOrInt(val):
         return None
     except (TypeError, ValueError) as e:
         print('*** NoneOrInt: Kann %(val)r nicht nach int konvertieren' % locals())
+        raise
+
+
+def NoneOrFloat(val):
+    """
+    Eine valide "Fließkommazahl", oder None ("float('')" ergibt einen ValueError)
+
+    >>> float('')                             # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+      ...
+    ValueError: ...
+    >>> NoneOrFloat(' ') is None
+    True
+    >>> NoneOrFloat('None') is None
+    True
+    >>> NoneOrFloat(' 3 ')
+    3.0
+    >>> not NoneOrFloat('0.00')
+    True
+    """
+    if val in (None, '', 'None'):
+        return None
+    elif isinstance(val, six_string_types) and not val.strip():
+        return None
+    try:
+        return float(val)
+    except KeyError:
+        return None
+    except (TypeError, ValueError) as e:
+        print('*** NoneOrFloat: Kann %(val)r nicht nach float konvertieren' % locals())
+        raise
+
+
+def NoneOrDecimal(val):
+    """
+    Eine valide Dezimalzahl, oder None ("Decimal('')" ergibt einen ValueError)
+
+    >>> Decimal('')
+    Traceback (most recent call last):
+      ...
+    InvalidOperation: Invalid literal for Decimal: ''
+    >>> NoneOrDecimal(' ') is None
+    True
+    >>> NoneOrDecimal('None') is None
+    True
+    >>> NoneOrDecimal(' 3 ')
+    Decimal('3')
+    >>> NoneOrDecimal('0.00')
+    Decimal('0.00')
+    >>> not NoneOrDecimal('0.00')
+    True
+    >>> NoneOrDecimal('0.00') == 0
+    True
+    >>> dec1 = NoneOrDecimal('1.23')
+    >>> dec2 = NoneOrDecimal(dec1)
+    >>> dec1 == dec2
+    True
+    """
+    if val in (None, '', 'None'):
+        return None
+    elif isinstance(val, six_string_types) and not val.strip():
+        return None
+    try:
+        return Decimal(val)
+    except KeyError:
+        return None
+    except (TypeError, ValueError) as e:
+        print('*** NoneOrDecimal: Kann %(val)r nicht nach Decimal konvertieren' % locals())
         raise
 
 

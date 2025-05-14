@@ -13,7 +13,7 @@ Breaking changes, estimated for future releases:
   - ``http_statustext``, because of questionable `func` option
   - ``make_url``
 
-  (estimated for release 1.5.0)
+  (estimated for releases 1.5.0 and 2.1.0)
  
 - `.htmlohmy.make_picture` function:
 

@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*- vim: ts=8 sts=4 sw=4 si et tw=79
-
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
@@ -162,12 +159,16 @@ def extract_hostname(url):
     Hostnamen ohne Protokoll:
     >>> extract_hostname('betonquali.de')
     'betonquali.de'
+    >>> urlsplit('betonquali.de').path
+    'betonquali.de'
 
     Wenn kein Hostname enthalten ist, knallt's:
     >>> extract_hostname('/akademie')
     Traceback (most recent call last):
         ...
     ValueError: '/akademie' doesn't contain a hostname
+    >>> urlsplit('/akademie')
+    SplitResult(scheme='', netloc='', path='/akademie', query='', fragment='')
     """
     try:
         return url.split(':')[1].split('/')[2]

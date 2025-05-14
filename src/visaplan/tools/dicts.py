@@ -440,7 +440,7 @@ class _prefixed(object):
     u'this is unicode'
     >>> _prefixed(b'ascii chars only')
     b'ascii chars only'
-        
+
     """
     def __init__(self, val):
         self.val = val

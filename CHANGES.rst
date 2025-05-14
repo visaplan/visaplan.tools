@@ -2,7 +2,15 @@ Changelog
 =========
 
 
-2.0.0 (estimated)
+2.1.0 (estimated)
+-----------------
+
+Breaking changes:
+
+- Remove deprecated ``.http`` functions, like in v1.5.0
+
+
+2.0.0 (unreleased)
 -----------------
 
 Breaking changes:

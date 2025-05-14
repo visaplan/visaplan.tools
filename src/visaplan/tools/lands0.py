@@ -13,7 +13,6 @@ from six.moves import range
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
-from sys import version_info
 if version_info[0] <= 2:
     # Standard library:
     from string import strip

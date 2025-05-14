@@ -58,7 +58,7 @@ Features
 
   - ``HtmlEntityProxy`` - a dict which returns unicode characters when given a named HTML entity
 
-  *(This module was named ``html`` in earlier releases up to 1.3.x but was
+  *(This module was named "html" in earlier releases up to 1.3.x but was
   renamed due to import problems in Python 3.)*
 
 - ``http`` module:

@@ -15,8 +15,13 @@ Breaking changes:
 
 Breaking changes:
 
-- Drop Python 2 compatiblity.
+- Drop Python 2 compatibility.
   (branch ``[py3-only]``)
+- Signature changes: Renamed first argument (from `form` to `dic`) for
+
+  - `.dicts.subdict`
+  - `.dicts.subdict_onekey`
+  - `.dicts.update_dict`
 
 Miscellaneous:
 

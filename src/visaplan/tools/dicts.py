@@ -31,14 +31,18 @@ __all__ = (
            )
 
 
-def subdict(form, keys=None, defaults={},
+def subdict(dic, keys=None, defaults={},
             defaults_factory=None,
             factory_map={},
             keyfunc=None,
             **kwargs):
     """
+    Note: The first argument `dic` was named `form` in visaplan.tools v1.x.
+          This change has been advertised.
+          You didn't specify this argument by name anyway, did you?
+
     Extrahiere die übergebenen Schlüssel aus dem übergebenen dict
-    (mutmaßlich einem von Zope generierten REQUEST.form-Objekt);
+    (z. B. einem von Zope generierten REQUEST.form-Objekt);
     mit do_pop=True werden die Schlüssel dabei entfernt.
 
     >>> bsp = {'user': 'heinz', 'password': 'geheim',
@@ -76,7 +80,7 @@ def subdict(form, keys=None, defaults={},
     defaultdict-Objekts verwendet wird.
 
     Wenn <keys> keine Sequenz von Schlüsseln, sondern None ist, werden alle
-    existierenden Schlüssel des <form>-Dictionarys verwendet.  Das ergibt genau
+    existierenden Schlüssel des <dic>-Dictionarys verwendet.  Das ergibt genau
     dann einen Sinn, wenn eine <factory_map> übergeben wird.
 
     Die <factory_map> gibt für jeden Schlüssel eine Funktion zurück,
@@ -107,9 +111,9 @@ def subdict(form, keys=None, defaults={},
     """
     do_pop = kwargs.pop('do_pop', False)
     if do_pop:
-        get = form.pop
+        get = dic.pop
     else:
-        get = form.get
+        get = dic.get
     if defaults_factory is not None:
         defdict = defaultdict(defaults_factory)
         defdict.update(defaults)
@@ -118,7 +122,7 @@ def subdict(form, keys=None, defaults={},
     res = {}
     aliases = {}
     if keys is None:
-        keys = list(form.keys())
+        keys = list(dic.keys())
     else:
         # Alternativer Name für ersten Schlüssel
         primary_fallback = kwargs.pop('primary_fallback', None)
@@ -131,7 +135,7 @@ def subdict(form, keys=None, defaults={},
         keys = list(filter(keyfunc, keys))
 
     for key in keys:
-        if key in form:
+        if key in dic:
             val = get(key)
             try:
                 func = factory_map[key]
@@ -139,7 +143,7 @@ def subdict(form, keys=None, defaults={},
                 res[key] = val
             else:
                 res[key] = func(val)
-        elif key in aliases and aliases[key] in form:
+        elif key in aliases and aliases[key] in dic:
             val = get(aliases[key])
             try:
                 func = factory_map[key]
@@ -152,8 +156,12 @@ def subdict(form, keys=None, defaults={},
     return res
 
 
-def subdict_onekey(form, firstof, strict=True):
+def subdict_onekey(dic, firstof, strict=True):
     """
+    Note: The first argument `dic` was named `form` in visaplan.tools v1.x.
+          This change has been advertised.
+          You didn't specify this argument by name anyway, did you?
+
     Für ähnliche Zwecke wie --> subdict, aber zur Extraktion nur eines Schlüssels
 
     >>> given = {'project_id': 42, 'p2_result': None}
@@ -162,7 +170,7 @@ def subdict_onekey(form, firstof, strict=True):
     """
     for key in firstof:
         try:
-            val = form[key]
+            val = dic[key]
         except KeyError:
             if strict:
                 raise
@@ -294,8 +302,12 @@ def updated(dic, **kwargs):
     return res
 
 
-def update_dict(form, changes, deletions):
+def update_dict(dic, changes, deletions):
     """
+    Note: The first argument `dic` was named `form` in visaplan.tools v1.x.
+          This change has been advertised.
+          You didn't specify this argument by name anyway, did you?
+
     Ändere das übergebene dict in-place und nimm Löschungen vor; da das Objekt
     selbst geändert wird (vergleichbar der Methode dict.update), wird stets
     None zurückgegeben.
@@ -317,10 +329,10 @@ def update_dict(form, changes, deletions):
     See as well --> .classes.ChangesCollector
     """
     for key in deletions:
-        if key in form:
-            del form[key]
+        if key in dic:
+            del dic[key]
     if changes:
-        form.update(changes)
+        dic.update(changes)
     return
 
 

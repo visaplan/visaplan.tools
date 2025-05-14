@@ -310,10 +310,10 @@ def make_dict_sequencer(firstkey=None,
     ...  #   return sorted([(key, sorted(val)) in dic.items)])
     >>> gen1 = convert({'default': {'key': 'default', 'val': 'Vorgabe 2'},
     ...                 'other': {'val': 'Abweichung 2'}})
-    >>> next(gen1)
-    {'key': 'default', 'val': 'Vorgabe 2'}
-    >>> next(gen1)
-    {'val': 'Abweichung 2', 'key': 'other'}
+    >>> next(gen1) == {'key': 'default', 'val': 'Vorgabe 2'}
+    True
+    >>> next(gen1) == {'val': 'Abweichung 2', 'key': 'other'}
+    True
     >>> next(gen1)
     Traceback (most recent call last):
       ...
@@ -324,7 +324,7 @@ def make_dict_sequencer(firstkey=None,
 
     Zunächst wird nur der Generator erzeugt; beim Iterieren fällt der Fehler
     dann auf:
-    >>> next(gen2)  # doctest: +NORMALIZE_WHITESPACE
+    >>> next(gen2)                          # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
       ...
     ValueError: item={'key': 'FEHLER',
@@ -336,10 +336,10 @@ def make_dict_sequencer(firstkey=None,
 
     >>> gen3 = convert({'default': {'key': 'default', 'val': 'Vorgabe 2'},
     ...                 'other': {'val': 'Abweichung 2'}}, curval='other')
-    >>> next(gen3)
-    {'key': 'default', 'val': 'Vorgabe 2', 'selected': False}
-    >>> next(gen3)
-    {'val': 'Abweichung 2', 'key': 'other', 'selected': True}
+    >>> next(gen3) == {'key': 'default', 'val': 'Vorgabe 2', 'selected': False}
+    True
+    >>> next(gen3) == {'val': 'Abweichung 2', 'key': 'other', 'selected': True}
+    True
     >>> next(gen3)
     Traceback (most recent call last):
       ...

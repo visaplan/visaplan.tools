@@ -112,32 +112,6 @@ __all__ = [
     # 'collapse_whitespace',
     ]
 
-class _prefixed(object):
-    """
-    little doctest helper ...
-    We'll get a 'u' prefix in Python 3:
-
-    >>> _prefixed(u'a')
-    u'a'
-    """
-    def __init__(self, val):
-        self.val = val
-
-    def __repr__(self):
-        val = self.val
-        if isinstance(val, list):
-            return [_prefixed(item) for item in val]
-        elif isinstance(val, tuple):
-            return tuple(_prefixed(item) for item in val)
-        res = repr(val)
-        if isinstance(val, six_text_type):
-            if not res.startswith('u'):
-                return 'u'+res
-        elif isinstance(val, bytes):
-            if not res.startswith('b'):
-                return 'b'+res
-        return res
-
 
 # ------------------------------------------------------ [ Daten ... [
 # Blockelemente: hier als solche Elemente verstanden, die in einem <p>, <span>
@@ -1124,6 +1098,39 @@ def _pop_two_joiners(dic):
         return elem_joiner, attr_joiner
     else:
         return joiner or '', ' '
+
+
+# -------------------------------------------- [ doctest helpers ... [
+class _prefixed(object):
+    """
+    little doctest helper ...
+    We'll get a 'u' prefix in Python 3 and a 'b' prefix in Python 2:
+
+    >>> _prefixed(u'this is unicode')
+    u'this is unicode'
+    >>> _prefixed(b'ascii chars only')
+    b'ascii chars only'
+        
+    """
+    def __init__(self, val):
+        self.val = val
+
+    def __repr__(self):
+        val = self.val
+        if isinstance(val, list):
+            return [_prefixed(item) for item in val]
+        elif isinstance(val, tuple):
+            return tuple(_prefixed(item) for item in val)
+        res = repr(val)
+        if bytes is str:  # Python 2
+            if isinstance(val, str):
+                return 'b'+res
+            return res
+        elif isinstance(val, str):
+            return 'u'+res
+        else:
+            return res
+# -------------------------------------------- ] ... doctest helpers ]
 
 
 if __name__ == '__main__':

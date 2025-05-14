@@ -17,6 +17,9 @@ else:
 try:
     pkg_version('zope.deprecation')
 except PackageNotFoundError:
+    # This won't work for python -m doctest path/to/this/module.py calls.
+    # Can/should we try to support this case as well, and:
+    # how could we do that?
     if __name__ != '__main__':
         raise
     HAS_ZOPEDEPRECATION = False

@@ -339,7 +339,7 @@ def checkPathForPackage(package, whitelist, path=None,
     ...          path=path,
     ...          logger=logger,
     ...          **kwargs)
-    ... # doctest: +FAIL_FAST
+    ... # doctest: +REPORT_ONLY_FIRST_FAILURE
 
     Looking for a package which is present, version in whitelist:
     >>> cpfp('visaplan.tools')

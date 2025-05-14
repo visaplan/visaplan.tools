@@ -23,7 +23,7 @@ __all__ = [
 
 try:
     # Local imports:
-    from .classes import Mirror
+    from visaplan.tools.classes import Mirror
 except (ImportError, ValueError):
     if __name__ == '__main__':
         Mirror = dict

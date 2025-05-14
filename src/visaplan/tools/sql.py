@@ -1014,10 +1014,8 @@ def update(table, dict_of_values,  # ------------- [ update ... [
     >>> tup2 = update('the.table', values, query_data)
     >>> tup2[0]
     'UPDATE the.table SET status=%(status)s WHERE id = ANY(%(id)s);'
-    >>> list(reversed(list(tup2[1].items())))  # doctest: +NORMALIZE_WHITESPACE
-    [('status', 'success'),
-     ('id',     [1, 2, 5])]
-
+    >>> tup2[1] == {'status': 'success', 'id': [1, 2, 5]}
+    True
 
     Beide Eingabe-Dictionarys sind unverändert:
 
@@ -1373,18 +1371,20 @@ def query(clause, *args, **kwargs):  # [ ---------- [ query ... [
     for names.  Thus, if you don't treat the names specially, you'll get
     something which the database server will very likely reject:
 
-    >>> query(txt,
-    ...       query_data={  # BAD EXAMPLE!
-    ...        'table1': 'users', 'table2': 'addresses',
-    ...        'filter': '%beeblebrox%'})  # doctest: +NORMALIZE_WHITESPACE
-    ('SELECT t1.user_id, t1.name, t2.address
+    >>> q = query(txt,
+    ...          query_data={  # BAD EXAMPLE!
+    ...           'table1': 'users', 'table2': 'addresses',
+    ...           'filter': '%beeblebrox%'})
+    >>> print(q[0])                            # doctest: +NORMALIZE_WHITESPACE
+    SELECT t1.user_id, t1.name, t2.address
       FROM %(table1)s t1
       JOIN %(table2)s t2
         ON t1.user_id = t2.user_id
-      WHERE t1.name ILIKE %(filter)s;',
-      {'table1': 'users',
-       'table2': 'addresses',
-       'filter': '%beeblebrox%'})
+      WHERE t1.name ILIKE %(filter)s;
+    >>> q[1] == {'table1': 'users',
+    ...          'table2': 'addresses',
+    ...          'filter': '%beeblebrox%'}
+    True
 
     The database adapter will probably replace the %(table1)s string by
     'users', but here a name is expected,

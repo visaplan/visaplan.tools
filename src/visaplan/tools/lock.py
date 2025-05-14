@@ -65,6 +65,7 @@ from packaging.version import parse as parse_version
 from collections import namedtuple
 import logging
 from os import unlink
+from os import makedirs
 from os.path import sep, normpath, isdir, abspath, join, dirname
 from time import sleep
 
@@ -490,7 +491,7 @@ class ConvenientLock(object):
     def logger(self):
         _lf = self.__logger
         if isinstance(_lf, str):
-            _self.__logger = lf = logging.getLogger(_lf)
+            _self.__logger = _lf = logging.getLogger(_lf)
         return _lf
 
     @property

@@ -94,18 +94,17 @@ def subdict(form, keys=None, defaults={},
     ...         return a.strip()
     ...     except (AttributeError, TypeError):
     ...         return a
-    >>> sd = subdict({'username': 'heinz ',
+    >>> sd = subdict({'username': b'heinz ',
     ...               'age': 18,
     ...               'nothing': None,
     ...               'name': u'Heinz Kunz '},
     ...              factory_map=defaultdict(lambda: strip))
-    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> [(k, _prefixed(v)) for (k, v) in sorted(sd.items())]
     ...                                       # doctest: +NORMALIZE_WHITESPACE
     [('age',      18),
      ('name',     u'Heinz Kunz'),
      ('nothing',  None),
-     ('username', u'heinz')]
+     ('username', b'heinz')]
 
     Wenn eine Funktion <keyfunc> übergeben wird (vorerst nur mit keys=None),
     werden nur Schlüssel extrahiert, für die diese Funktion True zurückgibt:
@@ -429,6 +428,39 @@ def getOption(odict, key, default=None, factory=NoneOrString,
                          % locals())
     return val
 # --------------------------- ] ... aus Products.unitracc.tools.misc ]
+
+
+# -------------------------------------------- [ doctest helpers ... [
+class _prefixed(object):
+    """
+    little doctest helper ...
+    We'll get a 'u' prefix in Python 3 and a 'b' prefix in Python 2:
+
+    >>> _prefixed(u'this is unicode')
+    u'this is unicode'
+    >>> _prefixed(b'ascii chars only')
+    b'ascii chars only'
+        
+    """
+    def __init__(self, val):
+        self.val = val
+
+    def __repr__(self):
+        val = self.val
+        if isinstance(val, list):
+            return [_prefixed(item) for item in val]
+        elif isinstance(val, tuple):
+            return tuple(_prefixed(item) for item in val)
+        res = repr(val)
+        if bytes is str:  # Python 2
+            if isinstance(val, str):
+                return 'b'+res
+            return res
+        elif isinstance(val, str):
+            return 'u'+res
+        else:
+            return res
+# -------------------------------------------- ] ... doctest helpers ]
 
 
 if __name__ == '__main__':

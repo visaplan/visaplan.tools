@@ -51,8 +51,7 @@ def csv_writer(csvfile, dialect='excel_ssv', **kwargs):
 
     Schreiben beendet; jetzt zurück auf los, und das Ergebnis lesen:
 
-    >>> io.seek(0)
-    0
+    >>> _ = io.seek(0)
     >>> str(io.read())
     "eins;zwei;drei\r\n1;22;222\r\n';0.5;extradrei\r\n"
 
@@ -81,9 +80,6 @@ def make_sequencer(keys, factory=None):
     die zur Transformation jedes einzelnen Werts verwendet wird;
     hier, um alle Strings in Unicode zu konvertieren:
 
-
-
-    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> from visaplan.tools.coding import make_safe_stringdecoder
     >>> uvalues = make_sequencer(names, make_safe_stringdecoder())
     >>> [_prefixed(val) for val in uvalues(dic)]
@@ -106,6 +102,39 @@ def make_sequencer(keys, factory=None):
     else:
         return in_order_transformed_values
 # --------------------------- ] ... aus Products.unitracc.tools.misc ]
+
+
+# -------------------------------------------- [ doctest helpers ... [
+class _prefixed(object):
+    """
+    little doctest helper ...
+    We'll get a 'u' prefix in Python 3 and a 'b' prefix in Python 2:
+
+    >>> _prefixed(u'this is unicode')
+    u'this is unicode'
+    >>> _prefixed(b'ascii chars only')
+    b'ascii chars only'
+
+    """
+    def __init__(self, val):
+        self.val = val
+
+    def __repr__(self):
+        val = self.val
+        if isinstance(val, list):
+            return [_prefixed(item) for item in val]
+        elif isinstance(val, tuple):
+            return tuple(_prefixed(item) for item in val)
+        res = repr(val)
+        if bytes is str:  # Python 2
+            if isinstance(val, str):
+                return 'b'+res
+            return res
+        elif isinstance(val, str):
+            return 'u'+res
+        else:
+            return res
+# -------------------------------------------- ] ... doctest helpers ]
 
 
 if __name__ == '__main__':

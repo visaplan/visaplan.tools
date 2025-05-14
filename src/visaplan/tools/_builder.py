@@ -22,18 +22,14 @@ Let's use this as an example:
 ... Let's use this as an example:
 ... '''
 
-But first we'll create a little test helper function:
-
->>> from visaplan.tools.htmlohmy import _prefixed
->>> def fpt(txt):
-...     return _prefixed(from_plain_text(txt, joiner=u' '))
->>> fpt(plain)       # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
-    u'<p> All we support is
-     <ul> <li> paragraphs
-          <li> unordered lists (not nested)
-          <li> hard linebreaks
-     </ul>
-     <p> Let...s use this as an example:'
+>>> print(from_plain_text(plain, joiner=u' '))
+...                                  # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+<p> All we support is
+<ul> <li> paragraphs
+     <li> unordered lists (not nested)
+     <li> hard linebreaks
+</ul>
+<p> Let...s use this as an example:
 
 Things demonstrated here:
 
@@ -48,6 +44,10 @@ Things demonstrated here:
 
 Now, into the details.
 
+First we'll create a little test helper function:
+
+>>> def fpt(txt):
+...     return _prefixed(from_plain_text(txt, joiner=u' '))
 >>> fpt(u'  ')
 u''
 >>> fpt(u'A two-line\nparagraph')
@@ -121,12 +121,8 @@ except ImportError:
 
 class LineInfo(object):
     r"""
-    >>> print(sorted(BULLET_CHARS))  # doctest: +FAIL_FAST
-    ['*', '+', '-', '•']
-
     >>> LineInfo(u'An ordinary paragraph.')
     <LineInfo('An ordinar...')>
-
     >>> LineInfo(u'* A list item.')
     <LineInfo(bullet='*'; 'A list ite...')>
     >>> LineInfo(u'+ A list item.')
@@ -217,7 +213,6 @@ def from_plain_text(txt, joiner=u'', decode=None):
     there is no headlines support or other fancy stuff.
 
     For our tests, we use a little helper function:
-    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> def fpt(txt):
     ...     return _prefixed(from_plain_text(txt, joiner=u' '))
     >>> fpt(u'  ')
@@ -320,6 +315,39 @@ def from_plain_text(txt, joiner=u'', decode=None):
                 res.append(u'<br>')
             res.append(html_escape(o.text))
     return joiner.join(res)
+
+
+# -------------------------------------------- [ doctest helpers ... [
+class _prefixed(object):
+    """
+    little doctest helper ...
+    We'll get a 'u' prefix in Python 3 and a 'b' prefix in Python 2:
+
+    >>> _prefixed(u'this is unicode')
+    u'this is unicode'
+    >>> _prefixed(b'ascii chars only')
+    b'ascii chars only'
+
+    """
+    def __init__(self, val):
+        self.val = val
+
+    def __repr__(self):
+        val = self.val
+        if isinstance(val, list):
+            return [_prefixed(item) for item in val]
+        elif isinstance(val, tuple):
+            return tuple(_prefixed(item) for item in val)
+        res = repr(val)
+        if bytes is str:  # Python 2
+            if isinstance(val, str):
+                return 'b'+res
+            return res
+        elif isinstance(val, str):
+            return 'u'+res
+        else:
+            return res
+# -------------------------------------------- ] ... doctest helpers ]
 
 
 if __name__ == '__main__':

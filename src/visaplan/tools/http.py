@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*- vim: ts=8 sts=4 sw=4 si et tw=79
-
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
@@ -17,6 +14,9 @@ else:
 try:
     pkg_version('zope.deprecation')
 except PackageNotFoundError:
+    # This won't work for python -m doctest path/to/this/module.py calls.
+    # Can/should we try to support this case as well, and:
+    # how could we do that?
     if __name__ != '__main__':
         raise
     HAS_ZOPEDEPRECATION = False
@@ -30,11 +30,11 @@ else:
         'The optional func argument is pretty fishy; '
         'with modern Python versions the function shouldn\'t be necessary '
         'anyway.'
-        '\nWill be removed in release 1.5.0.')
+        '\nWill be removed in release 2.1.0.')
     deprecated(
         'make_url',
         'The function doesn\'t satisfy the promise suggested by the name;'
-        '\nwill be removed in release 1.5.0.')
+        '\nwill be removed in release 2.1.0.')
 
 try:
     # Python compatibility:
@@ -160,12 +160,16 @@ def extract_hostname(url):
     Hostnamen ohne Protokoll:
     >>> extract_hostname('betonquali.de')
     'betonquali.de'
+    >>> urlsplit('betonquali.de').path
+    'betonquali.de'
 
     Wenn kein Hostname enthalten ist, knallt's:
     >>> extract_hostname('/akademie')
     Traceback (most recent call last):
         ...
     ValueError: '/akademie' doesn't contain a hostname
+    >>> urlsplit('/akademie')
+    SplitResult(scheme='', netloc='', path='/akademie', query='', fragment='')
     """
     try:
         return url.split(':')[1].split('/')[2]

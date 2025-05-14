@@ -10,7 +10,6 @@ from __future__ import absolute_import
 
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
-from sys import version_info
 if 1:
     def strip(s, *args, **kw):
         return s.strip(*args, **kw)
@@ -314,7 +313,7 @@ def list_of_strings(val, splitchar=None, splitfunc=None):
         return []
     elif isinstance(val, list):
         # aus Performanzgründen nur das erste Element prüfen:
-        if val and not isinstance(val[0], six_string_types):
+        if val and not isinstance(val[0], str):
             raise ValueError('list_of_strings: list contains non-strings!'
                              ' [%r%s]' % (val[0],
                                           val[1:] and ', ...' or ''))

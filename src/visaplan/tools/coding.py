@@ -34,7 +34,6 @@ def make_safe_decoder(preferred='utf-8', preflist=None, errors='replace',
     Erzeuge eine Funktion safe_decode, die für jeden basestring Unicode
     zurückgibt
 
-    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> def d(f, *args, **kw): return _prefixed(repr(f(*args, **kw)))
     >>> def t(f, *args, **kw):
     ...     res = f(*args, **kw)
@@ -158,7 +157,6 @@ def make_safe_stringdecoder(*args, **kwargs):
     Wie make_safe_decoder, aber unter Tolerierung von Nicht-Strings,
     die unverändert zurückgegeben werden
 
-    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> f = make_safe_stringdecoder()
     >>> f(42)
     42
@@ -181,7 +179,6 @@ def make_safe_recoder(preferred='utf-8', *args, **kwargs):
     Wie make_safe_decoder; die erzeugte Funktion gibt jedoch nicht Unicode,
     sondern einen codierten String (preferred-Encoding) zurück.
 
-    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> def d(f, *args, **kw): return _prefixed(repr(f(*args, **kw)))
     >>> def t(f, *args, **kw):
     ...     res = f(*args, **kw)
@@ -236,7 +233,6 @@ def safe_encode(s, charset='utf-8', errors='strict'):
     Nimm einen beliebigen Basestring und gib ihn als nicht-Unicode-String
     zurück
 
-    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> def _se(*args, **kw): return _prefixed(safe_encode(*args, **kw))
     >>> _prefixed(_se(u'äöü'))
     b'\xc3\xa4\xc3\xb6\xc3\xbc'
@@ -316,13 +312,12 @@ def make_whitespace_purger(uchars=NON_XML_WHITESPACE_U):
     Da die Funktion als Nachstufe für safe_decode gedacht ist, akzeptiert sie
     wirklich nur Unicode!
 
-    >>> from visaplan.tools.htmlohmy import _prefixed
     >>> purge_whitespace = make_whitespace_purger()
-    >>> def piw(*args, **kw): return _prefixed(purge_whitespace(*args, **kw))
+    >>> def piw(*args, **kw): print(purge_whitespace(*args, **kw))
     >>> piw(u'Verbau entfernen und Baugrube verf\xfcllen\x0b')
-    u'Verbau entfernen und Baugrube verfüllen'
+    Verbau entfernen und Baugrube verfüllen
     >>> piw(u'Verbau entfernen und Baugrube verf\xfcllen\x0b (Fortsetzung)')
-    u'Verbau entfernen und Baugrube verfüllen (Fortsetzung)'
+    Verbau entfernen und Baugrube verfüllen (Fortsetzung)
     """
     if not isinstance(uchars, str):
         raise ValueError('Ich will Unicode! (%r)' % (uchars,))
@@ -349,6 +344,39 @@ def make_whitespace_purger(uchars=NON_XML_WHITESPACE_U):
     return purge_inapt_whitespace
 
 purge_inapt_whitespace = make_whitespace_purger()
+
+
+# -------------------------------------------- [ doctest helpers ... [
+class _prefixed(object):
+    """
+    little doctest helper ...
+    We'll get a 'u' prefix in Python 3 and a 'b' prefix in Python 2:
+
+    >>> _prefixed(u'this is unicode')
+    u'this is unicode'
+    >>> _prefixed(b'ascii chars only')
+    b'ascii chars only'
+
+    """
+    def __init__(self, val):
+        self.val = val
+
+    def __repr__(self):
+        val = self.val
+        if isinstance(val, list):
+            return [_prefixed(item) for item in val]
+        elif isinstance(val, tuple):
+            return tuple(_prefixed(item) for item in val)
+        res = repr(val)
+        if bytes is str:  # Python 2
+            if isinstance(val, str):
+                return 'b'+res
+            return res
+        elif isinstance(val, str):
+            return 'u'+res
+        else:
+            return res
+# -------------------------------------------- ] ... doctest helpers ]
 
 
 if __name__ == '__main__':

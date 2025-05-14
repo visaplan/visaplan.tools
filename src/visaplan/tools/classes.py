@@ -10,7 +10,7 @@ from __future__ import absolute_import
 # Standard library:
 from sys import version_info
 if 1:  # yes, we have / require Python 3.3+:
-    from collections import Mapping
+    from collections.abc import Mapping
 if version_info[:2] >= (3, 8):
     from importlib.metadata import PackageNotFoundError
     from importlib.metadata import version as pkg_version

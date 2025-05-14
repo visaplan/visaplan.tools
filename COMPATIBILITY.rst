@@ -7,9 +7,7 @@ Compatibility
 ======== ========= ==========================
 Versions Python    Using packages *(cumulative)*
 ======== ========= ==========================
-2.0+     3.6+      *(not yet released)*
- 
-                   drop Python 2 support;
+2.0+     3.6+      drop Python 2 support;
                    don't require ``six`` anymore
 -------- --------- --------------------------
 1.4+     2.7,      + `setuptools v36.2+ <https://setuptools.pypa.io/en/latest/history.html#v36-2-0>`_

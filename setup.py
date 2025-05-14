@@ -73,7 +73,6 @@ long_description = '\n\n'.join([
     open('README.rst').read(),
     open('COMPATIBILITY.rst').read(),
     open('TODO.rst').read(),
-    open('CONTRIBUTORS.rst').read(),
     open('CHANGES.rst').read(),
 ])
 
@@ -140,7 +139,7 @@ def github_urls(package, **kwargs):
         })
     return res
 project_urls = github_urls(package_name,
-                           travis=True,
+                           travis=0,
                            pop_user=0)
 # ------------------------------------------- ] ... for setup_kwargs ]
 
@@ -150,13 +149,21 @@ setup_kwargs = dict(
     description="General Python tools",
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    python_requires='>="3.6"',
+    python_requires='>=3.6',
     # Get more from https://pypi.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Intended Audience :: Developers",
-        "Natural Language :: German",
+        "Natural Language :: German",  # ... in some docstrings
         "Operating System :: OS Independent",
         "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     ],

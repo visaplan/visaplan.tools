@@ -11,13 +11,16 @@ Breaking changes:
 
 
 2.0.0 (unreleased)
------------------
+------------------
 
 Breaking changes:
 
 - Drop Python 2 compatiblity.
   (branch ``[py3-only]``)
 
+Miscellaneous:
+
+- Don't require six_ anymore
 
 1.5.0 (estimated)
 -----------------

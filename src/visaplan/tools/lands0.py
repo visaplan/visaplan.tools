@@ -8,16 +8,10 @@ ihre Namen, Signaturen etc. sind noch vorläufig
 # Python compatibility:
 from __future__ import absolute_import
 
-from six import string_types as six_string_types
-from six.moves import range
-
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
 from sys import version_info
-if version_info[0] <= 2:
-    # Standard library:
-    from string import strip
-else:
+if 1:
     def strip(s, *args, **kw):
         return s.strip(*args, **kw)
 
@@ -327,7 +321,7 @@ def list_of_strings(val, splitchar=None, splitfunc=None):
         return val
     elif isinstance(val, set):
         return list_of_strings(sorted(val))
-    elif isinstance(val, six_string_types):
+    elif isinstance(val, str):
         pass
     else:
         return list_of_strings(list(val))
@@ -380,7 +374,7 @@ def string_of_list(val, splitchar='\n', transform=strip):
     """
     if val is None:
         return ''
-    elif isinstance(val, six_string_types):
+    elif isinstance(val, str):
         if transform is not None:
             return transform(val)
         return val
@@ -404,7 +398,7 @@ def lines_to_list(s):
     >>> lines_to_list('')
     []
     """
-    if isinstance(s, six_string_types):
+    if isinstance(s, str):
         s = s.splitlines()
     return [_f for _f in [item.strip()
                          for item in s] if _f]
@@ -425,7 +419,7 @@ def as_new_list(val, splitfunc=None):
     """
     if val is None:
         return []
-    if not isinstance(val, six_string_types):
+    if not isinstance(val, str):
         return list(val)
     if splitfunc is None:
         return [s.strip() for s in val.split(',')]
@@ -456,7 +450,7 @@ def makeListOrNone(val, default=None, ch=','):
             return makeListOrNone(default)
     elif not val:
         return None
-    elif isinstance(val, six_string_types):
+    elif isinstance(val, str):
         val = val.split(ch)
         tmp = [s.strip() for s in val]
         return [s for s in tmp
@@ -535,7 +529,7 @@ def makeSet(s, **kwargs):
         pass
     elif isinstance(s, (list, tuple)):
         s = set(s)
-    elif isinstance(s, six_string_types):
+    elif isinstance(s, str):
         tmp = set()
         for chunk in s.splitlines():
             val = chunk.strip()

@@ -5,15 +5,11 @@ Dateisystem-Tools für Unitracc
 # Python compatibility:
 from __future__ import absolute_import
 
-from six import string_types as six_string_types
-from six.moves import map
-
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
            2,  # id_of, now --> visaplan.plone.tools.functions
            )
 __version__ = '.'.join(map(str, VERSION))
-
 
 # Standard library:
 from glob import glob
@@ -117,7 +113,7 @@ def make_mtime_checker(logger=logger,
         spareextlist = kwargs.pop('spareextlist', default_spareextlist)
         spareext = set()
         if spareextlist:
-            if isinstance(sparextlist, six_string_types):
+            if isinstance(sparextlist, str):
                 spareextlist = [spareextlist]
             for ext in spareextlist:
                 if ext:

@@ -5,8 +5,6 @@ Very small functions
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-from six import string_types as six_string_types
-
 # Standard library:
 from decimal import Decimal
 
@@ -162,7 +160,7 @@ def NoneOrBool(val):
     """
     if val in (None, '', 'None'):
         return None
-    elif isinstance(val, six_string_types):
+    elif isinstance(val, str):
         val = val.strip().lower()
         if val in ('', 'none'):
             return None
@@ -181,7 +179,7 @@ def NoneOrInt(val):
     """
     if val in (None, '', 'None'):
         return None
-    elif isinstance(val, six_string_types) and not val.strip():
+    elif isinstance(val, str) and not val.strip():
         return None
     try:
         return int(val)
@@ -211,7 +209,7 @@ def NoneOrFloat(val):
     """
     if val in (None, '', 'None'):
         return None
-    elif isinstance(val, six_string_types) and not val.strip():
+    elif isinstance(val, str) and not val.strip():
         return None
     try:
         return float(val)
@@ -249,7 +247,7 @@ def NoneOrDecimal(val):
     """
     if val in (None, '', 'None'):
         return None
-    elif isinstance(val, six_string_types) and not val.strip():
+    elif isinstance(val, str) and not val.strip():
         return None
     try:
         return Decimal(val)
@@ -284,7 +282,7 @@ def is_nonempty_string(val):
     >>> is_nonempty_string(123)
     False
     """
-    if isinstance(val, six_string_types):
+    if isinstance(val, str):
         return bool(val)
     else:
         return False
@@ -488,7 +486,7 @@ def check_kwargs(checked_kwargs, **my_kwargs):
     allowed = pop('allowed', None)
     if allowed is None:
         allowed = set()
-    elif isinstance(allowed, six_string_types):
+    elif isinstance(allowed, str):
         raise ValueError('allowed option must be a non-string sequence,'
                          ' preferably a set! (%(allowed)r)'
                          % locals())

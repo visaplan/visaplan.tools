@@ -6,15 +6,12 @@ Tools for time calculations
 # Python compatibility:
 from __future__ import absolute_import
 
-from six.moves import map
-
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
            4,  # make_safe_decoder, now --> .coding
            9,  # unique_union,      now --> .sequences
            )
 __version__ = '.'.join(map(str, VERSION))
-
 
 # Standard library:
 from calendar import timegm

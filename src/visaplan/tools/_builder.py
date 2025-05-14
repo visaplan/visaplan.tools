@@ -89,14 +89,7 @@ u'<ul> <li> S &amp; P <li> visaplan <li> clever &amp; smart'
 # Python compatibility:
 from __future__ import absolute_import
 
-from six import string_types as six_string_types
-from six import text_type as six_text_type
-from six import unichr
-
-from sys import version_info
-if version_info[0] <= 2:
-    from six.moves.html_entities import name2codepoint
-else:
+if 1:
     from html.entities import name2codepoint
 
 # Standard library:
@@ -113,7 +106,7 @@ __all__ = [
 
 # as long as we have this in a separate module,
 # we'd rather not use the HtmlEntityProxy:
-BULLET_CHARS = set([unichr(name2codepoint['bull']),
+BULLET_CHARS = set([chr(name2codepoint['bull']),
                     ] + list(u'*-+'))
 
 try:
@@ -151,7 +144,7 @@ class LineInfo(object):
 
     """
     def __init__(self, s):
-        assert isinstance(s, six_text_type)
+        assert isinstance(s, str)
 
         s = s.rstrip()
         self.bullet = bullet = None

@@ -6,9 +6,6 @@ Coding/Decoding tools
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-from six import text_type as six_text_type
-from six.moves import map
-
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
            4,  # make_safe_decoder
@@ -41,7 +38,7 @@ def make_safe_decoder(preferred='utf-8', preflist=None, errors='replace',
     >>> def d(f, *args, **kw): return _prefixed(repr(f(*args, **kw)))
     >>> def t(f, *args, **kw):
     ...     res = f(*args, **kw)
-    ...     print('is (unicode) str:', isinstance(res, six_text_type))
+    ...     print('is (unicode) str:', isinstance(res, str))
     ...     print('is bytes:        ', isinstance(res, bytes))
     ...     print(res)
     >>> safe_decode = make_safe_decoder()
@@ -110,7 +107,7 @@ def make_safe_decoder(preferred='utf-8', preflist=None, errors='replace',
         """
         Nimm einen beliebigen Basestring und gib ihn als Unicode zurück
         """
-        if isinstance(s, six_text_type):
+        if isinstance(s, str):
             return s
         for encoding in preflist:
             try:
@@ -129,7 +126,7 @@ def make_safe_decoder(preferred='utf-8', preflist=None, errors='replace',
         """
         try:
             res = None
-            if isinstance(s, six_text_type):
+            if isinstance(s, str):
                 res = s
             else:
                 for encoding in preflist:
@@ -189,7 +186,7 @@ def make_safe_recoder(preferred='utf-8', *args, **kwargs):
     >>> def t(f, *args, **kw):
     ...     res = f(*args, **kw)
     ...     print('is (unicode) str / bytes:',
-    ...           isinstance(res, six_text_type),
+    ...           isinstance(res, str),
     ...           isinstance(res, bytes))
     ...     if isinstance(res, bytes):
     ...         print(_prefixed(res))
@@ -255,7 +252,7 @@ def safe_encode(s, charset='utf-8', errors='strict'):
     if not s:
         return ''
     # schon ein codierter String: einfach verwenden
-    if not isinstance(s, six_text_type):
+    if not isinstance(s, str):
         return s
     try:
         return s.encode(charset, 'strict')
@@ -282,7 +279,7 @@ def make_safe_encoder(charset='utf-8', errors='replace',
         if not s:
             return ''
         # schon ein codierter String: einfach verwenden
-        if not isinstance(s, six_text_type):
+        if not isinstance(s, str):
             return s
         try:
             return s.encode(charset, 'strict')
@@ -327,7 +324,7 @@ def make_whitespace_purger(uchars=NON_XML_WHITESPACE_U):
     >>> piw(u'Verbau entfernen und Baugrube verf\xfcllen\x0b (Fortsetzung)')
     u'Verbau entfernen und Baugrube verfüllen (Fortsetzung)'
     """
-    if not isinstance(uchars, six_text_type):
+    if not isinstance(uchars, str):
         raise ValueError('Ich will Unicode! (%r)' % (uchars,))
     ucharset = frozenset(uchars)
 
@@ -336,7 +333,7 @@ def make_whitespace_purger(uchars=NON_XML_WHITESPACE_U):
         Bereinige den übergebenen unicode-String bzgl. ungeeigneten Leerraums,
         z. B. vertikaler Tab-Zeichen (0x0b bzw. \v), die etree unverdaulich findet.
         """
-        if not isinstance(u, six_text_type):
+        if not isinstance(u, str):
             raise ValueError('Ich will Unicode! (%r)' % (u,))
         if not ucharset.intersection(u):
             return u

@@ -6,9 +6,6 @@ words - split strings into words
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-from six import string_types as six_string_types
-from six import text_type as six_text_type
-
 # Local imports:
 from visaplan.tools.htmlohmy import entity_aware
 from visaplan.tools.sequences import sequence_slide
@@ -163,7 +160,7 @@ def _head_kwargs(kw):
             kw['ellipsis'] = '...'
         else:
             kw['ellipsis'] = u'...'
-    elif not isinstance(ellipsis, six_string_types):
+    elif not isinstance(ellipsis, str):
         raise ValueError('ellipsis=%(ellipsis)r: string expected!' % locals())
 
     return_tuple = kw.get('return_tuple')
@@ -348,7 +345,7 @@ def head(s, **kwargs):
         kw['got_bytes'] = 1
         joiner = b''
         numseps = set(b'.,')
-    elif isinstance(s, six_text_type):
+    elif isinstance(s, str):
         kw['got_bytes'] = 0
         joiner = u''
         numseps = set(u'.,')

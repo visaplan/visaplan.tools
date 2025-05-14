@@ -4,7 +4,7 @@
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-from six.moves.urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit
 
 from sys import version_info
 if version_info[:2] >= (3, 8):
@@ -38,7 +38,8 @@ else:
 
 try:
     # Python compatibility:
-    from six.moves.http_client import responses as http_responses
+    from http.client import responses as http_responses
+    pprint(http_responses)
 except ImportError:
     # Mapping status codes to official W3C names
     http_responses = {

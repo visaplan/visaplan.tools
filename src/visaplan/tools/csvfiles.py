@@ -11,12 +11,9 @@ import csv
 import sys
 from codecs import BOM_UTF8
 
-if sys.version_info > (3,):
+if 1:
    # Standard library:
    from io import StringIO
-else:
-   # Standard library (Python 2):
-   from StringIO import StringIO
 
 
 __all__ = ['ExcelSSV',  # Excel+ssv (semicolon-separated values)

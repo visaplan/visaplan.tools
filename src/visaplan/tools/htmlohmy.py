@@ -75,8 +75,6 @@ supporting paragraphs and unordered lists:
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-from six import text_type as six_text_type
-from six import unichr
 
 # IMPORTANT: This must come FIRST (before the name2codepoint import);
 #            otherwise we had a strange import error in Python 3.6!
@@ -89,10 +87,7 @@ except ImportError:
     def html_escape(s):
         return cgi_escape(s, quote=1)
 
-from sys import version_info
-if version_info[0] <= 2:
-    from six.moves.html_entities import name2codepoint
-else:
+if 1:
     from html.entities import name2codepoint
 
 # Standard library:
@@ -130,7 +125,7 @@ class _prefixed(object):
         elif isinstance(val, tuple):
             return tuple(_prefixed(item) for item in val)
         res = repr(val)
-        if isinstance(val, six_text_type):
+        if isinstance(val, str):
             if not res.startswith('u'):
                 return 'u'+res
         elif isinstance(val, bytes):
@@ -204,7 +199,7 @@ class HtmlEntityProxy(dict):
         try:
             return dict.__getitem__(self, key)
         except KeyError:
-            val = unichr(name2codepoint[key])
+            val = chr(name2codepoint[key])
             dict.__setitem__(self, key, val)
             return val
 
@@ -417,7 +412,7 @@ def _unicode_without_bom(s, charset='utf-8'):
     >>> print(_unicode_without_bom('\xef\xbb\xbfÄh'))  # doctest: +SKIP
     u'\xc4h'
     """
-    if isinstance(s, six_text_type):
+    if isinstance(s, str):
         return s
     # BOM-Präfix ist kein Unicode, sondern eine Bytes-Folge
     # --> implizit ausgelöste Decodierung von s
@@ -778,7 +773,7 @@ def make_picture(**kw):
     Pity. In such cases, we'd need to create multiple <source> elements and
     spread the sizes value to 'media' and 'sizes' attributes,
     which is sadly not yet implemented.
-    
+
     We can suppress the sizes attribute by specifying a non-None
     falsy value:
     >>> kw['sizes'] = 0

@@ -7,13 +7,9 @@ Autor: Tobias Herp
 # Python compatibility:
 from __future__ import absolute_import
 
-from six import string_types as six_string_types
-
 # Standard library:
 from sys import version_info
-if version_info[:2] >= (3, 3):
-    from collections.abc import Mapping
-else:
+if 1:  # yes, we have / require Python 3.3+:
     from collections import Mapping
 if version_info[:2] >= (3, 8):
     from importlib.metadata import PackageNotFoundError
@@ -1305,7 +1301,7 @@ class ChangesCollector(dict):
         For "magic" values, the special subvalues are stored as sets or,
         if collections-extended is installed, as setlists (ordered sets)
         """
-        if not isinstance(key, six_string_types):
+        if not isinstance(key, str):
             raise ValueError('All keys are expected to be strings; '
                              'got %(key)r!'
                              % locals())
@@ -1390,7 +1386,7 @@ class ChangesCollector(dict):
                     other_val = bestset()
                 else:
                     raw_val = thedict[key]
-                    if isinstance(raw_val, six_string_types):
+                    if isinstance(raw_val, str):
                         raise ValueError('We have changes here for a key %(key)r '
                                          'which is a string in the reference dict!')
                     other_val = bestset(raw_val)

@@ -7,10 +7,6 @@ Autor: Tobias Herp
 # Python compatibility:
 from __future__ import absolute_import, print_function
 
-from six import string_types as six_string_types
-from six import text_type as six_text_type
-from six.moves import map
-
 # Local imports:
 from visaplan.tools.minifuncs import check_kwargs
 
@@ -457,7 +453,7 @@ def asciibox_lines(label, ch, width, kwargs):
     wid_ = width - 2
     empt = (' ' * wid_).join((ch, ch))
     liz = [asti, empt]
-    if isinstance(label, six_string_types):
+    if isinstance(label, str):
         assert not kwargs
         ham_ = label.strip().center(wid_).join((ch, ch))
         liz.append(ham_)
@@ -523,7 +519,7 @@ def print_indented(txt, indent=0):
         b
 
     """
-    if isinstance(txt, six_text_type):
+    if isinstance(txt, str):
         prefix = u' ' * indent
     else:
         prefix = ' ' * indent
@@ -623,7 +619,7 @@ def has_strings(haystack, *needles, **kwargs):
     label = pop('label', None)
     func = pop('func', print)
     other = pop('other', None)
-    if isinstance(other, six_string_types):
+    if isinstance(other, str):
         other = [other]
 
     check_kwargs(kwargs)  # raises TypeError if necessary
@@ -649,7 +645,7 @@ def has_strings(haystack, *needles, **kwargs):
     else:
         func(repr(shortened))
     prev_offset = None
-    if isinstance(haystack, six_text_type):
+    if isinstance(haystack, str):
         zugabe = 5  # 'u' prefix
     else:
         zugabe = 4

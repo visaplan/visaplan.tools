@@ -5,18 +5,11 @@ Tools für Python-Dictionarys
 # Python compatibility:
 from __future__ import absolute_import
 
-from six import string_types as six_string_types
-from six.moves import filter
-
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 
 # Standard library:
 from collections import defaultdict
-from sys import version_info
-if version_info[0] <= 2:
-    # Standard library:
-    from string import strip
-else:
+if 1:
     def strip(s, *args, **kw):
         return s.strip(*args, **kw)
 
@@ -400,7 +393,7 @@ def getOption(odict, key, default=None, factory=NoneOrString,
         else:
             raise KeyError(key)
     val = odict[key]
-    if factory is not None and isinstance(val, six_string_types):
+    if factory is not None and isinstance(val, str):
         val = factory(val)
     if choices:
         try:

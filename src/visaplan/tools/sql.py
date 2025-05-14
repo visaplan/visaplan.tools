@@ -10,9 +10,6 @@ which generates code for SQLAlchemy.
 # Python compatibility:
 from __future__ import absolute_import
 
-from six import string_types as six_string_types
-from six.moves import map, zip
-
 # Standard library:
 from collections import defaultdict
 
@@ -95,7 +92,7 @@ def check_name(sqlname, for_select=False):
       ...
     ValueError: Invalid chars in 'evil_field;truncate table users': (' ', ';')
     """
-    if not isinstance(sqlname, six_string_types):
+    if not isinstance(sqlname, str):
         raise TypeError('%r is not a string' % (sqlname,))
 
     invalid = set(sqlname).difference(ALLNAMECHARS)
@@ -747,7 +744,7 @@ def make_dict_extractor(**kwargs):
         res = {}
         if fields is None:
             fields = list(source.keys())  # we iterate this once only
-        elif isinstance(fields, six_string_types):
+        elif isinstance(fields, str):
             fields = fields.split()
         for field in fields:
             if field in source:
@@ -764,7 +761,7 @@ def make_dict_extractor(**kwargs):
         res = {}
         if fields is None:
             fields = list(source.keys())  # we iterate this once only
-        elif isinstance(fields, six_string_types):
+        elif isinstance(fields, str):
             fields = fields.split()
         for field in fields:
             if field in source:
@@ -822,7 +819,7 @@ def _fields_and_querydata(args, kwargs, qd_name='query_data'):  # - [[
                                 % locals())
             query_data = a
             have_qdata = True
-        elif isinstance(a, six_string_types) or is_sequence(a):
+        elif isinstance(a, str) or is_sequence(a):
             if have_fields:
                 raise TypeError('Duplicate fields spec. (%(a)r; '
                                 'we already have %(fields)r)'
@@ -848,7 +845,7 @@ def _fields_and_querydata(args, kwargs, qd_name='query_data'):  # - [[
     elif fields == '*':
         pass
     elif fields:
-        if isinstance(fields, six_string_types):
+        if isinstance(fields, str):
             fields = fields.split()
         fields = ', '.join(check_name(field) for field in fields)
     else:
@@ -1049,7 +1046,7 @@ def update(table, dict_of_values,  # ------------- [ update ... [
     >>> sorted(tup4[1].items())
     [('status', 'done'), ('status_old', 'in_progress')]
 
-    
+
 
     Table names are checked for invalid values:
     >>> update('evil.table;truncate table users', {'status': 'done'})[0]
@@ -1122,7 +1119,7 @@ def update(table, dict_of_values,  # ------------- [ update ... [
                  allowed=set(['returning', 'where', 'fork',
                               'strict']))
     where = kwargs.get('where')
-    if where and not isinstance(where, six_string_types):
+    if where and not isinstance(where, str):
         raise ValueError('where must be a string; found %(where)r'
                          % locals())
     if query_data and not where:
@@ -1205,7 +1202,7 @@ def delete(table,  # ----------------------------- [ delete ... [
                              table=table),
                ]
     where = kwargs.get('where')
-    if where and not isinstance(where, six_string_types):
+    if where and not isinstance(where, str):
         raise ValueError('where must be a string; found %(where)r'
                          % locals())
     if query_data and not where:
@@ -1322,7 +1319,7 @@ def select(table,  # ----------------------------- [ select ... [
                ]
     if distinct:
         query_l.insert(1, 'DISTINCT')
-    if where and not isinstance(where, six_string_types):
+    if where and not isinstance(where, str):
         raise ValueError('where must be a string; found %(where)r'
                          % locals())
     if where is None and query_data:

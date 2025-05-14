@@ -6,8 +6,6 @@ Mock-Klassen für Doctests
 # Python compatibility:
 from __future__ import absolute_import
 
-from six.moves import map
-
 __author__ = "Tobias Herp <tobias.herp@visaplan.com>"
 VERSION = (0,
            4,  # MockBrowser, MockContext

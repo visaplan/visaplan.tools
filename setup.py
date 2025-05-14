@@ -174,7 +174,6 @@ setup_kwargs = dict(
     install_requires=[
         'setuptools >=36.2',
         'importlib_metadata; python_version <"3.8"',
-        'six',
     ],
     extras_require={
         'lock': [
